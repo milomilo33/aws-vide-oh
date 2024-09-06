@@ -1,20 +1,60 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"net/url"
+	"os"
+
 	"user-service/controllers"
 	"user-service/database"
 	"user-service/middleware"
 	"user-service/models"
+	"user-service/utils"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	ginadapter "github.com/awslabs/aws-lambda-go-api-proxy/gin"
 	"github.com/gin-gonic/gin"
 )
 
+var ginLambda *ginadapter.GinLambda
+
+func init() {
+	// Initialize Router
+	router := initRouter()
+
+	// Create the Lambda handler
+	ginLambda = ginadapter.New(router)
+}
+
 func main() {
-	fmt.Println("Hello, World!")
+	// Load env vars
+	secretName := os.Getenv("DB_SECRET_NAME")
+	if secretName == "" {
+		log.Fatal("DB_SECRET_NAME environment variable is not set")
+	}
+	region := os.Getenv("REGION")
+	if secretName == "" {
+		log.Fatal("REGION environment variable is not set")
+	}
+
+	// Read AWS secret DB connection info
+	secret, err := utils.GetSecret(secretName, region)
+	if err != nil {
+		log.Fatalf("Failed to retrieve secret: %v", err)
+	}
+	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
+		secret.Username,
+		url.QueryEscape(secret.Password),
+		secret.Host,
+		secret.Port,
+		secret.DBName,
+	)
 
 	// Initialize Database
-	database.Connect("postgresql://localhost/vide-oh-users?user=postgres&password=root")
+	database.Connect(connectionString)
 	database.Migrate()
 
 	// Initial Data
@@ -58,9 +98,14 @@ func main() {
 	supportUser.HashPassword(supportUser.Password)
 	database.Instance.Save(&supportUser)
 
-	// Initialize Router
-	router := initRouter()
-	router.Run(":8081")
+	// Start the Lambda handler
+	lambda.Start(Handler)
+
+	fmt.Println("User service lambda started!")
+}
+
+func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	return ginLambda.ProxyWithContext(ctx, req)
 }
 
 func initRouter() *gin.Engine {
@@ -68,7 +113,8 @@ func initRouter() *gin.Engine {
 	api := router.Group("/api/users")
 	{
 		api.POST("/login", controllers.Login)
-		api.POST("/user/register", controllers.RegisterUser)
+		api.POST("/register", controllers.RegisterUser)
+		api.GET("/ping", controllers.Ping)
 		secured := api.Group("/secured").Use(middleware.Auth())
 		{
 			secured.GET("/ping", controllers.Ping)

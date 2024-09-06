@@ -1,0 +1,116 @@
+service: vide-oh
+
+provider:
+  name: aws
+  runtime: provided.al2023
+  region: eu-central-1
+  memorySize: 512
+  timeout: 5
+  stage: dev
+  apiGateway:
+    apiKeys:
+      - videohApiKey
+    usagePlan:
+      quota:
+        limit: 300
+        period: MONTH
+      throttle:
+        burstLimit: 5
+        rateLimit: 1
+  vpc:
+    securityGroupIds:
+      - "Fn::ImportValue": LambdaSecurityGroupId
+    subnetIds:
+      - "Fn::ImportValue": VpcPrivateSubnet1
+  environment:
+    DB_SECRET_NAME:
+      "Fn::ImportValue": RdsSecretName
+    REGION: ${self:provider.region}
+
+package:
+  individually: true
+
+functions:
+  userHandler:
+    handler: user-service/bin/bootstrap
+    timeout: 30
+    events:
+      - http:
+          path: /api/users/ping
+          method: GET
+          private: true
+      - http:
+          path: /api/users/login
+          method: POST
+          private: true
+      - http:
+          path: /api/users/register
+          method: POST
+          private: true
+      - http:
+          path: /api/users/secured/ping
+          method: GET
+          private: true
+      - http:
+          path: /api/users/secured/user/all-registered
+          method: GET
+          private: true
+      - http:
+          path: /api/users/secured/block/{email}
+          method: GET
+          private: true
+      - http:
+          path: /api/users/secured/user/{id}
+          method: GET
+          private: true
+      - http:
+          path: /api/users/secured/user/current
+          method: GET
+          private: true
+      - http:
+          path: /api/users/secured/user/change-name
+          method: GET
+          private: true
+    role: videohRole
+    package:
+      artifact: user-service/bin/lambda-handler.zip
+
+resources:
+  Resources:
+    videohRole:
+      Type: AWS::IAM::Role
+      Properties:
+        Path: /videoh/
+        RoleName: VideohRole
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: allowLogsAccess
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogStream
+                    - logs:CreateLogGroup
+                    - logs:PutLogEvents
+                    - logs:TagResource
+                  Resource:
+                    - Fn::Sub: "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vide-oh*"
+          - PolicyName: allowSecretsManagerAccess
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - secretsmanager:GetSecretValue
+                  Resource:
+                    - Fn::Sub: 
+                        - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretName}*"
+                        - SecretName: !ImportValue RdsSecretName
