@@ -39,12 +39,6 @@ export class RDSStack extends cdk.Stack {
     const rdsInstance = new rds.DatabaseInstance(this, 'RDSPostgresInstance', {
         engine: rds.DatabaseInstanceEngine.POSTGRES,
         vpc,
-        // vpcSubnets: {
-        //     subnetIds: [
-        //         cdk.Fn.importValue('VpcPrivateSubnet1')
-        //     ]
-        // },
-        // proveriti da li ga stavi u private subnet
         securityGroups: [rdsSecurityGroup],
         credentials: rds.Credentials.fromSecret(rdsCredentialsSecret),
         instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO), // Free tier eligible

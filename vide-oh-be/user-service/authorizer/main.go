@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"user-service/auth"
 	"user-service/database"
 	"user-service/middleware"
 	"user-service/utils"
@@ -15,15 +16,62 @@ import (
 
 func handler(request events.APIGatewayV2CustomAuthorizerV1Request) (events.APIGatewayCustomAuthorizerResponse, error) {
 	token := request.Headers["Authorization"]
+	if token == "" {
+		return generateUnauthorizedResponse("Authorization token is missing"), nil
+	}
+
+	// Validate token
 	err, claims := middleware.ValidateTokenForLambdaAuthorizer(token)
 	if err != nil {
-		return events.APIGatewayCustomAuthorizerResponse{}, fmt.Errorf("unauthorized: %v", err)
+		fmt.Println(err)
+		return generateForbiddenResponse(fmt.Sprintf("unauthorized: %v", err)), nil
 	}
 
 	// Create policy allowing access to the resource
 	policy := generatePolicy(claims.Email, "Allow", request.MethodArn)
 
 	return policy, nil
+}
+
+// Function to generate a 403 Forbidden response
+func generateForbiddenResponse(message string) events.APIGatewayCustomAuthorizerResponse {
+	return events.APIGatewayCustomAuthorizerResponse{
+		PrincipalID: "user",
+		PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
+			Version: "2012-10-17",
+			Statement: []events.IAMPolicyStatement{
+				{
+					Action:   []string{"execute-api:Invoke"},
+					Effect:   "Deny",
+					Resource: []string{"*"},
+				},
+			},
+		},
+		Context: map[string]interface{}{
+			"message": message,
+		},
+	}
+}
+
+// Function to generate a 401 Unauthorized response
+func generateUnauthorizedResponse(message string) events.APIGatewayCustomAuthorizerResponse {
+	return events.APIGatewayCustomAuthorizerResponse{
+		PrincipalID: "user",
+		PolicyDocument: events.APIGatewayCustomAuthorizerPolicy{
+			Version: "2012-10-17",
+			Statement: []events.IAMPolicyStatement{
+				{
+					Action:   []string{"execute-api:Invoke"},
+					Effect:   "Deny",
+					Resource: []string{"*"},
+				},
+			},
+		},
+		Context: map[string]interface{}{
+			"message":    message,
+			"statusCode": 401,
+		},
+	}
 }
 
 func generatePolicy(principalId, effect, resource string) events.APIGatewayCustomAuthorizerResponse {
@@ -44,30 +92,34 @@ func generatePolicy(principalId, effect, resource string) events.APIGatewayCusto
 
 func main() {
 	// Load env vars
-	secretName := os.Getenv("DB_SECRET_NAME")
-	if secretName == "" {
+	dbSecretName := os.Getenv("DB_SECRET_NAME")
+	if dbSecretName == "" {
 		log.Fatal("DB_SECRET_NAME environment variable is not set")
 	}
 	region := os.Getenv("REGION")
-	if secretName == "" {
+	if region == "" {
 		log.Fatal("REGION environment variable is not set")
 	}
+	keySecretName := os.Getenv("KEY_SECRET_NAME")
+	if keySecretName == "" {
+		log.Fatal("KEY_SECRET_NAME environment variable is not set")
+	}
 
-	// Read AWS secret DB connection info
-	secret, err := utils.GetSecret(secretName, region)
+	// Fetch secrets from SM
+	dbSecret, keySecret, err := utils.GetSecrets(dbSecretName, keySecretName, region)
 	if err != nil {
 		log.Fatalf("Failed to retrieve secret: %v", err)
 	}
 	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
-		secret.Username,
-		url.QueryEscape(secret.Password),
-		secret.Host,
-		secret.Port,
-		secret.DBName,
+		dbSecret.Username,
+		url.QueryEscape(dbSecret.Password),
+		dbSecret.Host,
+		dbSecret.Port,
+		dbSecret.DBName,
 	)
+	auth.SetJwtKey(keySecret.SecretKey)
 
 	database.Connect(connectionString)
-	database.Migrate()
 
 	lambda.Start(handler)
 }

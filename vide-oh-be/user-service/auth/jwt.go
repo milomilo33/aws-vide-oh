@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"log"
 	"time"
@@ -9,14 +9,13 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-var jwtKey = generateRandomBytes(32)
+var jwtKey []byte
 
-func generateRandomBytes(length int) []byte {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		log.Fatalf("Error generating random bytes: %v", err)
+func SetJwtKey(secretKey string) {
+	_, err := base64.StdEncoding.DecodeString(secretKey)
+	if err != nil {
+		log.Fatalf("Failed to decode base64 string: %v", err)
 	}
-	return bytes
 }
 
 type JWTClaim struct {

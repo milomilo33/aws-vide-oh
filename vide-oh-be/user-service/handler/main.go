@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 
+	"user-service/auth"
 	"user-service/controllers"
 	"user-service/database"
 	"user-service/middleware"
@@ -31,27 +32,32 @@ func init() {
 
 func main() {
 	// Load env vars
-	secretName := os.Getenv("DB_SECRET_NAME")
-	if secretName == "" {
+	dbSecretName := os.Getenv("DB_SECRET_NAME")
+	if dbSecretName == "" {
 		log.Fatal("DB_SECRET_NAME environment variable is not set")
 	}
 	region := os.Getenv("REGION")
-	if secretName == "" {
+	if region == "" {
 		log.Fatal("REGION environment variable is not set")
 	}
+	keySecretName := os.Getenv("KEY_SECRET_NAME")
+	if keySecretName == "" {
+		log.Fatal("KEY_SECRET_NAME environment variable is not set")
+	}
 
-	// Read AWS secret DB connection info
-	secret, err := utils.GetSecret(secretName, region)
+	// Fetch secrets from SM
+	dbSecret, keySecret, err := utils.GetSecrets(dbSecretName, keySecretName, region)
 	if err != nil {
 		log.Fatalf("Failed to retrieve secret: %v", err)
 	}
 	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s",
-		secret.Username,
-		url.QueryEscape(secret.Password),
-		secret.Host,
-		secret.Port,
-		secret.DBName,
+		dbSecret.Username,
+		url.QueryEscape(dbSecret.Password),
+		dbSecret.Host,
+		dbSecret.Port,
+		dbSecret.DBName,
 	)
+	auth.SetJwtKey(keySecret.SecretKey)
 
 	// Initialize Database
 	database.Connect(connectionString)

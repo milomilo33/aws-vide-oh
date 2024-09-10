@@ -27,32 +27,44 @@ type DBSecret struct {
 	DBName   string `json:"dbname"`
 }
 
-func GetSecret(secretName, region string) (*DBSecret, error) {
-	// Load the default AWS config
+type KeySecret struct {
+	SecretKey string `json:"secretKey"`
+}
+
+func GetSecrets(secretName, keySecretName, region string) (*DBSecret, *KeySecret, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 	if err != nil {
-		return nil, fmt.Errorf("unable to load SDK config, %v", err)
+		return nil, nil, fmt.Errorf("unable to load SDK config, %v", err)
 	}
 
-	// Create a Secrets Manager client
 	client := secretsmanager.NewFromConfig(cfg)
 
-	// Get the secret value
-	input := &secretsmanager.GetSecretValueInput{
+	dbInput := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	}
-
-	result, err := client.GetSecretValue(context.TODO(), input)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve secret: %v", err)
+	keyInput := &secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(keySecretName),
 	}
 
-	// Parse the secret string
-	var secret DBSecret
-	err = json.Unmarshal([]byte(*result.SecretString), &secret)
+	dbResult, err := client.GetSecretValue(context.TODO(), dbInput)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal secret: %v", err)
+		return nil, nil, fmt.Errorf("failed to retrieve secret: %v", err)
+	}
+	keyResult, err := client.GetSecretValue(context.TODO(), keyInput)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to retrieve secret: %v", err)
 	}
 
-	return &secret, nil
+	var dbSecret DBSecret
+	err = json.Unmarshal([]byte(*dbResult.SecretString), &dbSecret)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal secret: %v", err)
+	}
+	var keySecret KeySecret
+	err = json.Unmarshal([]byte(*keyResult.SecretString), &keySecret)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal secret: %v", err)
+	}
+
+	return &dbSecret, &keySecret, nil
 }
