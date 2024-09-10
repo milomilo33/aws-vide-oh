@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"user-service/auth"
 	"user-service/database"
@@ -19,13 +20,16 @@ func Login(context *gin.Context) {
 	var user models.User
 	if err := context.ShouldBindJSON(&request); err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		fmt.Println("xd")
 		context.Abort()
 		return
 	}
+	fmt.Println(request)
 
 	record := database.Instance.Where("email = ?", request.Email).First(&user)
 	if record.Error != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": record.Error.Error()})
+		fmt.Println("xd2")
 		context.Abort()
 		return
 	}
@@ -33,6 +37,7 @@ func Login(context *gin.Context) {
 	credentialError := user.CheckPassword(request.Password)
 	if credentialError != nil {
 		context.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		fmt.Println("xd3")
 		context.Abort()
 		return
 	}
@@ -40,6 +45,7 @@ func Login(context *gin.Context) {
 	tokenString, err := auth.GenerateJWT(user.Email, user.Role.String())
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		fmt.Println("xd4")
 		context.Abort()
 		return
 	}

@@ -1,13 +1,23 @@
 package auth
 
 import (
+	"crypto/rand"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 )
 
-var jwtKey = []byte("supersecretkey")
+var jwtKey = generateRandomBytes(32)
+
+func generateRandomBytes(length int) []byte {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		log.Fatalf("Error generating random bytes: %v", err)
+	}
+	return bytes
+}
 
 type JWTClaim struct {
 	Email string `json:"email"`

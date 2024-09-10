@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"user-service/auth"
 	"user-service/database"
 	"user-service/models"
@@ -39,4 +40,25 @@ func Auth() gin.HandlerFunc {
 
 		context.Next()
 	}
+}
+
+func ValidateTokenForLambdaAuthorizer(token string) (err error, jwtClaims auth.JWTClaim) {
+	err, claims := auth.ValidateToken(token)
+	if err != nil {
+		return
+	}
+
+	// auth invalid if user blocked
+	var user models.User
+	if err = database.Instance.Where("email = ?", claims.Email).First(&user).Error; err != nil {
+		return
+	}
+	if user.Blocked {
+		err = errors.New("user account is blocked")
+		return
+	}
+
+	jwtClaims = claims
+
+	return
 }

@@ -26,6 +26,11 @@ provider:
     DB_SECRET_NAME:
       "Fn::ImportValue": RdsSecretName
     REGION: ${self:provider.region}
+  # logs:
+  #   restApi:
+  #     executionLogging: true
+  #     level: INFO
+  #     fullExecutionData: true
 
 package:
   individually: true
@@ -51,6 +56,7 @@ functions:
           path: /api/users/secured/ping
           method: GET
           private: true
+          cors: true
       - http:
           path: /api/users/secured/user/all-registered
           method: GET
@@ -74,6 +80,43 @@ functions:
     role: videohRole
     package:
       artifact: user-service/bin/lambda-handler.zip
+
+  videoHandler:
+    handler: video-service/bin/bootstrap
+    timeout: 30
+    environment:
+      USER_SECURED_API_URL:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: ApiGatewayRestApi
+            - ".execute-api."
+            - Ref: AWS::Region
+            - ".amazonaws.com/"
+            - ${self:provider.stage}
+            - "/api/users/secured/ping"
+    events:
+      - http:
+          path: /api/videos/ping
+          method: GET
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+    role: videohRole
+    package:
+      artifact: video-service/bin/lambda-handler.zip
+
+  userAuthorizer:
+    handler: user-service/bin/bootstrap
+    events:
+      - http:
+          path: /api/authorize
+          method: GET
+    role: videohRole
+    package:
+      artifact: user-service/bin/lambda-authorizer.zip
 
 resources:
   Resources:
@@ -114,3 +157,16 @@ resources:
                     - Fn::Sub: 
                         - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretName}*"
                         - SecretName: !ImportValue RdsSecretName
+          # delete?
+          # - PolicyName: allowApiGatewayAccess
+          #   PolicyDocument:
+          #     Version: "2012-10-17"
+          #     Statement:
+          #       - Effect: Allow
+          #         Action:
+          #           - execute-api:Invoke
+          #         Resource:
+          #           # - Fn::Sub: "arn:aws:apigateway:${AWS::Region}::/restapis/${ApiGatewayRestApi}/stages/${self:provider.stage}/methods/GET/*"
+          #           - Fn::Sub: "arn:aws:apigateway:${AWS::Region}::/restapis/${ApiGatewayRestApi}*"
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole

@@ -1,5 +1,6 @@
 build:
 	$(MAKE) -C user-service build
+	$(MAKE) -C video-service build
 
 deploy: build
 	serverless deploy

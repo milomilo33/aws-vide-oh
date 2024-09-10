@@ -37,6 +37,12 @@ export class VPCStack extends cdk.Stack {
             privateDnsEnabled: true,
             securityGroups: [lambdaSG],
         });
+    //    new ec2.InterfaceVpcEndpoint(this, 'ApiGatewayVpcEndpoint', {
+    //         vpc,
+    //         service: ec2.InterfaceVpcEndpointAwsService.APIGATEWAY,
+    //         privateDnsEnabled: true,
+    //         securityGroups: [lambdaSG],
+    //     });
 
         // new cdk.CfnOutput(this, 'VpcPublicSubnet1', {
         //     value: vpc.publicSubnets[0].subnetId,
