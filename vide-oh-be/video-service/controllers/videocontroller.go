@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
@@ -193,6 +192,76 @@ func GetAllReportedVideos(context *gin.Context) {
 // 	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
 // }
 
+// func UploadVideo(c *gin.Context) {
+// 	_, claims := utils.GetTokenClaims(c)
+// 	if claims.Role != "RegisteredUser" {
+// 		c.JSON(401, gin.H{"error": "unauthorized role"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	// single file
+// 	file, _ := c.FormFile("file")
+// 	fmt.Println(file.Filename)
+
+// 	if filepath.Ext(file.Filename) != ".mp4" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid extension"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	// Generate random filename
+// 	rand.Seed(time.Now().UnixNano())
+// 	rndNum := rand.Intn(math.MaxInt32-0) + 0
+// 	filenameNoExt := strconv.Itoa(rndNum)
+// 	file.Filename = filenameNoExt + ".mp4"
+
+// 	// Upload file to S3
+// 	src, err := file.Open()
+
+// 	if err != nil {
+// 		log.Println("Failed to open file:", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open file"})
+// 		return
+// 	}
+// 	defer src.Close()
+
+// 	err = uploadToS3(src, file.Filename)
+// 	if err != nil {
+// 		log.Println("Failed to upload to S3:", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload to S3"})
+// 		return
+// 	}
+
+// 	// generate thumbnail and save it to /static
+// 	wd, err := os.Getwd()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	videoFullPath := wd + "/static/" + file.Filename
+// 	thumbnailOutputFile := generateVideoThumbnail(videoFullPath)
+// 	thumbnailDst, err := os.Create("static/" + filenameNoExt + ".jpg")
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot create thumbnail file"})
+// 		c.Abort()
+// 		return
+// 	}
+// 	defer thumbnailDst.Close()
+// 	io.Copy(thumbnailDst, thumbnailOutputFile)
+// 	thumbnailOutputFile.Close()
+
+// 	// Save video metadata to DB
+// 	video := &models.Video{
+// 		Title:       c.Query("title"),
+// 		Description: c.Query("description"),
+// 		OwnerEmail:  claims.Email,
+// 		Filename:    filenameNoExt,
+// 	}
+// 	database.Instance.Save(&video)
+
+// 	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
+// }
+
 func UploadVideo(c *gin.Context) {
 	_, claims := utils.GetTokenClaims(c)
 	if claims.Role != "RegisteredUser" {
@@ -215,11 +284,10 @@ func UploadVideo(c *gin.Context) {
 	rand.Seed(time.Now().UnixNano())
 	rndNum := rand.Intn(math.MaxInt32-0) + 0
 	filenameNoExt := strconv.Itoa(rndNum)
-	file.Filename = filenameNoExt + ".mp4"
+	videoFilename := filenameNoExt + ".mp4"
 
-	// Upload file to S3
+	// Upload video file to S3
 	src, err := file.Open()
-
 	if err != nil {
 		log.Println("Failed to open file:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open file"})
@@ -227,10 +295,19 @@ func UploadVideo(c *gin.Context) {
 	}
 	defer src.Close()
 
-	err = uploadToS3(src, file.Filename)
+	err = uploadToS3(src, videoFilename, "video/mp4")
 	if err != nil {
 		log.Println("Failed to upload to S3:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload to S3"})
+		return
+	}
+
+	// Generate thumbnail and upload to S3
+	videoFullPath := fmt.Sprintf("https://vide-oh-videos.s3.eu-central-1.amazonaws.com/%s", videoFilename)
+	err = generateVideoThumbnail(videoFullPath, filenameNoExt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate thumbnail"})
+		c.Abort()
 		return
 	}
 
@@ -243,10 +320,10 @@ func UploadVideo(c *gin.Context) {
 	}
 	database.Instance.Save(&video)
 
-	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
+	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", videoFilename))
 }
 
-func uploadToS3(file multipart.File, filename string) error {
+func uploadToS3(file multipart.File, filename, contentType string) error {
 	// Read file content
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(file)
@@ -256,45 +333,115 @@ func uploadToS3(file multipart.File, filename string) error {
 		Bucket:      aws.String(bucketName),
 		Key:         aws.String(filename),
 		Body:        bytes.NewReader(buf.Bytes()),
-		ContentType: aws.String("video/mp4"),
-		ACL:         types.ObjectCannedACLPrivate,
+		ContentType: aws.String(contentType),
+		ACL:         types.ObjectCannedACLPublicRead,
 	})
 	return err
 }
 
-func generateVideoThumbnail(url string) *os.File {
-	tempDir, err := ioutil.TempDir("", "thumbnail*")
-	if err != nil {
-		panic(err)
-	}
+// func uploadToS3(file multipart.File, filename string) error {
+// 	// Read file content
+// 	buf := new(bytes.Buffer)
+// 	buf.ReadFrom(file)
 
-	outputFilePath := tempDir + "/thumbnail.png"
+// 	// Upload to S3
+// 	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+// 		Bucket:      aws.String(bucketName),
+// 		Key:         aws.String(filename),
+// 		Body:        bytes.NewReader(buf.Bytes()),
+// 		ContentType: aws.String("video/mp4"),
+// 		ACL:         types.ObjectCannedACLPrivate,
+// 	})
+// 	return err
+// }
 
-	cmd := `ffmpeg -i "%s" -an -q 0 -vf scale="'if(gt(iw,ih),-1,200):if(gt(iw,ih),200,-1)', crop=200:200:exact=1" -vframes 1 "%s"`
-	// ffmpeg cmd ref : https://gist.github.com/TimothyRHuertas/b22e1a252447ab97aa0f8de7c65f96b8
+// func generateVideoThumbnail(url string) *os.File {
+// 	tempDir, err := ioutil.TempDir("", "thumbnail*")
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	cmdSubstituted := fmt.Sprintf(cmd, url, outputFilePath)
+// 	outputFilePath := tempDir + "/thumbnail.png"
 
-	// shellName := "ash" // for docker (using alpine image)
-	// if os.Getenv("ENV") != "" && os.Getenv("ENV") == "LOCAL" {
-	// 	shellName = "bash"
-	// }
+// 	cmd := `ffmpeg -i "%s" -an -q 0 -vf scale="'if(gt(iw,ih),-1,200):if(gt(iw,ih),200,-1)', crop=200:200:exact=1" -vframes 1 "%s"`
+// 	// ffmpeg cmd ref : https://gist.github.com/TimothyRHuertas/b22e1a252447ab97aa0f8de7c65f96b8
+
+// 	cmdSubstituted := fmt.Sprintf(cmd, url, outputFilePath)
+
+// 	// shellName := "ash" // for docker (using alpine image)
+// 	// if os.Getenv("ENV") != "" && os.Getenv("ENV") == "LOCAL" {
+// 	// 	shellName = "bash"
+// 	// }
+// 	shellName := "bash"
+
+// 	ffCmd := exec.Command(shellName, "-c", cmdSubstituted)
+
+// 	// getting real error msg : https://stackoverflow.com/questions/18159704/how-to-debug-exit-status-1-error-when-running-exec-command-in-golang
+// 	output, err := ffCmd.CombinedOutput()
+// 	if err != nil {
+// 		log.Println(fmt.Sprint(err) + ": " + string(output))
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 	}
+// 	log.Println(string(output))
+
+// 	outputFile, _ := os.Open(outputFilePath)
+// 	return outputFile
+// }
+
+// func generateVideoThumbnail(url string) *os.File {
+// 	// Use /tmp for temporary file storage in Lambda
+// 	outputFilePath := "/tmp/thumbnail.png"
+
+// 	cmd := `ffmpeg -i "%s" -an -q 0 -vf scale="'if(gt(iw,ih),-1,200):if(gt(iw,ih),200,-1)', crop=200:200:exact=1" -vframes 1 "%s"`
+// 	cmdSubstituted := fmt.Sprintf(cmd, url, outputFilePath)
+
+// 	// Use bash to execute the command
+// 	shellName := "bash"
+// 	ffCmd := exec.Command(shellName, "-c", cmdSubstituted)
+
+// 	output, err := ffCmd.CombinedOutput()
+// 	if err != nil {
+// 		log.Println(fmt.Sprint(err) + ": " + string(output))
+// 		panic(err)
+// 	}
+// 	log.Println(string(output))
+
+// 	// Open the thumbnail file
+// 	outputFile, err := os.Open(outputFilePath)
+// 	if err != nil {
+// 		log.Println("Failed to open thumbnail file:", err)
+// 		panic(err)
+// 	}
+// 	return outputFile
+// }
+
+func generateVideoThumbnail(videoPath string, filenameNoExt string) error {
+	// Use /tmp for temporary file storage in Lambda
+	outputFilePath := fmt.Sprintf("/tmp/%s.png", filenameNoExt)
+
+	cmd := fmt.Sprintf(`./ffmpeg -i "%s" -an -q 0 -vf scale='if(gt(iw,ih),-1,200):if(gt(iw,ih),200,-1)',crop=200:200:exact=1 -vframes 1 "%s"`, videoPath, outputFilePath)
+
 	shellName := "bash"
+	ffCmd := exec.Command(shellName, "-c", cmd)
 
-	ffCmd := exec.Command(shellName, "-c", cmdSubstituted)
-
-	// getting real error msg : https://stackoverflow.com/questions/18159704/how-to-debug-exit-status-1-error-when-running-exec-command-in-golang
 	output, err := ffCmd.CombinedOutput()
 	if err != nil {
 		log.Println(fmt.Sprint(err) + ": " + string(output))
-		if err != nil {
-			panic(err)
-		}
+		return err
 	}
 	log.Println(string(output))
 
-	outputFile, _ := os.Open(outputFilePath)
-	return outputFile
+	// Upload thumbnail to S3
+	file, err := os.Open(outputFilePath)
+	if err != nil {
+		log.Println("Failed to open thumbnail file:", err)
+		return err
+	}
+	defer file.Close()
+
+	return uploadToS3(file, fmt.Sprintf("%s.png", filenameNoExt), "image/png")
 }
 
 func DeleteVideo(context *gin.Context) {

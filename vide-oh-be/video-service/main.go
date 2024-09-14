@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"os/exec"
 
 	"video-service/controllers"
 	"video-service/database"
@@ -83,6 +84,30 @@ func CORS() gin.HandlerFunc {
 }
 
 func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	cmd := exec.Command("bash", "-c", "echo $PATH")
+	pathOutput, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Println("Error executing command:", err)
+		log.Println("Output:", string(pathOutput))
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Body:       "Error",
+		}, nil
+	}
+
+	cmd = exec.Command("bash", "-c", "ls -l")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Println("Error executing command:", err)
+		log.Println("Output:", string(output))
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Body:       "Error",
+		}, nil
+	}
+
+	log.Println("Directory contents:", string(output))
+
 	return ginLambda.ProxyWithContext(ctx, req)
 }
 

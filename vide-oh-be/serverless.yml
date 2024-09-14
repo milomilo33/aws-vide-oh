@@ -86,6 +86,8 @@ functions:
   videoHandler:
     handler: video-service/bin/bootstrap
     timeout: 30
+    # layers:
+    #   - Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:ffmpeg:3
     events:
       - http:
           path: /api/videos/ping
