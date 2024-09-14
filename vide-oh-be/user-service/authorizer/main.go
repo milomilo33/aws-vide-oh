@@ -19,7 +19,7 @@ func handler(request events.APIGatewayV2CustomAuthorizerV1Request) (events.APIGa
 	if token == "" {
 		return generateUnauthorizedResponse("Authorization token is missing"), nil
 	}
-
+	fmt.Println("hi")
 	// Validate token
 	err, claims := middleware.ValidateTokenForLambdaAuthorizer(token)
 	if err != nil {

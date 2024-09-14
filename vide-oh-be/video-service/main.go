@@ -9,7 +9,6 @@ import (
 
 	"video-service/controllers"
 	"video-service/database"
-	"video-service/models"
 	"video-service/utils"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -57,13 +56,13 @@ func main() {
 	database.Migrate()
 
 	// Initial Data
-	video := &models.Video{
-		Filename:    "someuniquefilename",
-		OwnerEmail:  "user@user.com",
-		Title:       "user's example video",
-		Description: "you'll see nothing special here",
-	}
-	database.Instance.Save(&video)
+	// video := &models.Video{
+	// 	Filename:    "someuniquefilename",
+	// 	OwnerEmail:  "user@user.com",
+	// 	Title:       "user's example video",
+	// 	Description: "you'll see nothing special here",
+	// }
+	// database.Instance.Save(&video)
 
 	// Start the Lambda handler
 	lambda.Start(Handler)
@@ -93,7 +92,7 @@ func initRouter() *gin.Engine {
 	router.MaxMultipartMemory = 10 * 1024 * 1024
 	api := router.Group("/api/videos")
 	{
-		api.Static("/static", "./static")
+		// api.Static("/static", "./static")
 		api.GET("/video-stream/:name", controllers.StreamVideo)
 		api.GET("/report-video/:id", controllers.ReportVideo)
 		api.GET("/search-videos", controllers.SearchVideos)

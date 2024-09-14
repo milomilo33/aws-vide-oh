@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"bytes"
+	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,10 +20,26 @@ import (
 	"video-service/models"
 	"video-service/utils"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/gin-gonic/gin"
 )
 
 const CHUNK_SIZE int64 = 1024 * 1024
+
+var s3Client *s3.Client
+var bucketName = "vide-oh-videos"
+
+// S3 client
+func init() {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"))
+	if err != nil {
+		log.Fatalf("unable to load SDK config, %v", err)
+	}
+	s3Client = s3.NewFromConfig(cfg)
+}
 
 func StreamVideo(context *gin.Context) {
 	rangeHeader := context.Request.Header["Range"][0]
@@ -111,6 +129,70 @@ func GetAllReportedVideos(context *gin.Context) {
 	context.JSON(http.StatusOK, videos)
 }
 
+// func UploadVideo(c *gin.Context) {
+// 	_, claims := utils.GetTokenClaims(c)
+// 	if claims.Role != "RegisteredUser" {
+// 		c.JSON(401, gin.H{"error": "unauthorized role"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	// single file
+// 	file, _ := c.FormFile("file")
+// 	fmt.Println(file.Filename)
+
+// 	if filepath.Ext(file.Filename) != ".mp4" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid extension"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	// generate random number for filename
+// 	rand.Seed(time.Now().UnixNano())
+// 	rndNum := rand.Intn(math.MaxInt32-0) + 0
+// 	filenameNoExt := strconv.Itoa(rndNum)
+// 	file.Filename = filenameNoExt + ".mp4"
+
+// 	// create record for video in db
+// 	video := &models.Video{
+// 		Title:       c.Query("title"),
+// 		Description: c.Query("description"),
+// 		OwnerEmail:  claims.Email,
+// 		Filename:    filenameNoExt,
+// 	}
+// 	database.Instance.Save(&video)
+
+// 	// Upload the file to specific dst.
+// 	// wd, err := os.Getwd()
+// 	// if err != nil {
+// 	// 	panic(err)
+// 	// }
+// 	// parent := filepath.Dir(wd)
+// 	err := c.SaveUploadedFile(file, "static/"+file.Filename)
+// 	if err != nil {
+// 		fmt.Println(err.Error())
+// 	}
+
+// 	// generate thumbnail and save it to /static
+// 	wd, err := os.Getwd()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	videoFullPath := wd + "/static/" + file.Filename
+// 	thumbnailOutputFile := generateVideoThumbnail(videoFullPath)
+// 	thumbnailDst, err := os.Create("static/" + filenameNoExt + ".jpg")
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot create thumbnail file"})
+// 		c.Abort()
+// 		return
+// 	}
+// 	defer thumbnailDst.Close()
+// 	io.Copy(thumbnailDst, thumbnailOutputFile)
+// 	thumbnailOutputFile.Close()
+
+// 	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
+// }
+
 func UploadVideo(c *gin.Context) {
 	_, claims := utils.GetTokenClaims(c)
 	if claims.Role != "RegisteredUser" {
@@ -129,13 +211,30 @@ func UploadVideo(c *gin.Context) {
 		return
 	}
 
-	// generate random number for filename
+	// Generate random filename
 	rand.Seed(time.Now().UnixNano())
 	rndNum := rand.Intn(math.MaxInt32-0) + 0
 	filenameNoExt := strconv.Itoa(rndNum)
 	file.Filename = filenameNoExt + ".mp4"
 
-	// create record for video in db
+	// Upload file to S3
+	src, err := file.Open()
+
+	if err != nil {
+		log.Println("Failed to open file:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open file"})
+		return
+	}
+	defer src.Close()
+
+	err = uploadToS3(src, file.Filename)
+	if err != nil {
+		log.Println("Failed to upload to S3:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload to S3"})
+		return
+	}
+
+	// Save video metadata to DB
 	video := &models.Video{
 		Title:       c.Query("title"),
 		Description: c.Query("description"),
@@ -144,35 +243,23 @@ func UploadVideo(c *gin.Context) {
 	}
 	database.Instance.Save(&video)
 
-	// Upload the file to specific dst.
-	// wd, err := os.Getwd()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// parent := filepath.Dir(wd)
-	err := c.SaveUploadedFile(file, "static/"+file.Filename)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	// generate thumbnail and save it to /static
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	videoFullPath := wd + "/static/" + file.Filename
-	thumbnailOutputFile := generateVideoThumbnail(videoFullPath)
-	thumbnailDst, err := os.Create("static/" + filenameNoExt + ".jpg")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot create thumbnail file"})
-		c.Abort()
-		return
-	}
-	defer thumbnailDst.Close()
-	io.Copy(thumbnailDst, thumbnailOutputFile)
-	thumbnailOutputFile.Close()
-
 	c.String(http.StatusOK, fmt.Sprintf("'%s' uploaded!", file.Filename))
+}
+
+func uploadToS3(file multipart.File, filename string) error {
+	// Read file content
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(file)
+
+	// Upload to S3
+	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket:      aws.String(bucketName),
+		Key:         aws.String(filename),
+		Body:        bytes.NewReader(buf.Bytes()),
+		ContentType: aws.String("video/mp4"),
+		ACL:         types.ObjectCannedACLPrivate,
+	})
+	return err
 }
 
 func generateVideoThumbnail(url string) *os.File {

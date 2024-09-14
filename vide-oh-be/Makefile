@@ -6,11 +6,15 @@ generate-secret:
 	echo "Skipping secret creation, it may already exist"
 	echo "Secret generated and stored in Secrets Manager"
 
+make-s3-bucket:
+	aws s3api create-bucket --bucket vide-oh-videos --region eu-central-1 \
+    	--create-bucket-configuration LocationConstraint=eu-central-1
+
 build:
 	$(MAKE) -C user-service build
 	$(MAKE) -C video-service build
 
-deploy: generate-secret build
+deploy: generate-secret make-s3-bucket build
 	serverless deploy
 	
 clean:

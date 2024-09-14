@@ -90,11 +90,23 @@ functions:
       - http:
           path: /api/videos/ping
           method: GET
+          cors: true
           private: true
           authorizer:
             name: userAuthorizer
             type: REQUEST
             identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/videos/upload-video
+          method: POST
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
     role: videohRole
     package:
       artifact: video-service/bin/lambda-handler.zip
@@ -151,5 +163,15 @@ resources:
                         - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretName}*"
                         - SecretName: !ImportValue RdsSecretName
                     - Fn::Sub: "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:VideohSecretKey*"
+          - PolicyName: allowS3Access
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:GetObject
+                    - s3:PutObject
+                  Resource:
+                    - "arn:aws:s3:::vide-oh-videos/*"
         ManagedPolicyArns:
           - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
