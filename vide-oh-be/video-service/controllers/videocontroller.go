@@ -28,8 +28,11 @@ import (
 
 const CHUNK_SIZE int64 = 1024 * 1024
 
-var s3Client *s3.Client
-var bucketName = "vide-oh-videos"
+var (
+	s3Client      *s3.Client
+	bucketName    = "vide-oh-videos"
+	presignClient *s3.PresignClient
+)
 
 // S3 client
 func init() {
@@ -38,64 +41,292 @@ func init() {
 		log.Fatalf("unable to load SDK config, %v", err)
 	}
 	s3Client = s3.NewFromConfig(cfg)
+	presignClient = s3.NewPresignClient(s3Client)
 }
 
-func StreamVideo(context *gin.Context) {
-	rangeHeader := context.Request.Header["Range"][0]
-	ranges := strings.Split(strings.Replace(rangeHeader, "bytes=", "", 1), "-")
-	start, err := strconv.ParseInt(ranges[0], 10, 64)
+// func StreamVideo(context *gin.Context) {
+// 	rangeHeader := context.Request.Header["Range"][0]
+// 	ranges := strings.Split(strings.Replace(rangeHeader, "bytes=", "", 1), "-")
+// 	start, err := strconv.ParseInt(ranges[0], 10, 64)
+// 	if err != nil {
+// 		context.Status(http.StatusNotAcceptable)
+// 		context.Abort()
+// 		return
+// 	}
+// 	// var end int64
+// 	// if len(ranges) == 2 && len(ranges[1]) > 0 {
+// 	// 	end, err = strconv.ParseInt(ranges[1], 10, 64)
+// 	// 	if err != nil {
+// 	// 		context.Status(http.StatusNotAcceptable)
+// 	// 		context.Abort()
+// 	// 		return
+// 	// 	}
+// 	// } else {
+// 	// 	end = start + CHUNK_SIZE
+// 	// }
+
+// 	// binary read
+// 	name := context.Param("name")
+// 	file, err := os.Open("static/" + name + ".mp4")
+
+// 	if err != nil {
+// 		context.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+// 		context.Abort()
+// 		return
+// 	}
+// 	defer file.Close()
+
+// 	stats, statsErr := file.Stat()
+// 	if statsErr != nil {
+// 		context.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+// 		context.Abort()
+// 		return
+// 	}
+
+// 	var totalFileSize int64 = stats.Size()
+// 	end := start + CHUNK_SIZE
+// 	if end > totalFileSize-1 {
+// 		end = totalFileSize - 1
+// 	}
+
+// 	contentLength := end - start + 1
+// 	data := make([]byte, contentLength)
+// 	file.Seek(start, 0)
+// 	bytesRead, _ := file.Read(data)
+// 	fmt.Println("Bytes read: " + strconv.Itoa(bytesRead))
+
+// 	context.Writer.Header().Add("Content-Range", "bytes "+strconv.FormatInt(start, 10)+"-"+strconv.FormatInt(end, 10)+"/"+strconv.FormatInt(totalFileSize, 10))
+// 	context.Writer.Header().Add("Accept-Ranges", "bytes")
+// 	context.Writer.Header().Add("Content-Length", strconv.FormatInt(contentLength, 10))
+// 	context.Data(206, "video/mp4", data)
+// }
+
+func StreamVideo(c *gin.Context) {
+	videoFilename := c.Param("name") + ".mp4"
+
+	// Generate a pre-signed URL for the video object
+	req := &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(videoFilename),
+	}
+
+	presignedURL, err := presignClient.PresignGetObject(context.TODO(), req, func(p *s3.PresignOptions) {
+		p.Expires = 15 * time.Minute // URL valid for 15 minutes
+	})
 	if err != nil {
-		context.Status(http.StatusNotAcceptable)
-		context.Abort()
-		return
-	}
-	// var end int64
-	// if len(ranges) == 2 && len(ranges[1]) > 0 {
-	// 	end, err = strconv.ParseInt(ranges[1], 10, 64)
-	// 	if err != nil {
-	// 		context.Status(http.StatusNotAcceptable)
-	// 		context.Abort()
-	// 		return
-	// 	}
-	// } else {
-	// 	end = start + CHUNK_SIZE
-	// }
-
-	// binary read
-	name := context.Param("name")
-	file, err := os.Open("static/" + name + ".mp4")
-
-	if err != nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		context.Abort()
-		return
-	}
-	defer file.Close()
-
-	stats, statsErr := file.Stat()
-	if statsErr != nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		context.Abort()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate pre-signed URL"})
+		c.Abort()
 		return
 	}
 
-	var totalFileSize int64 = stats.Size()
-	end := start + CHUNK_SIZE
-	if end > totalFileSize-1 {
-		end = totalFileSize - 1
-	}
-
-	contentLength := end - start + 1
-	data := make([]byte, contentLength)
-	file.Seek(start, 0)
-	bytesRead, _ := file.Read(data)
-	fmt.Println("Bytes read: " + strconv.Itoa(bytesRead))
-
-	context.Writer.Header().Add("Content-Range", "bytes "+strconv.FormatInt(start, 10)+"-"+strconv.FormatInt(end, 10)+"/"+strconv.FormatInt(totalFileSize, 10))
-	context.Writer.Header().Add("Accept-Ranges", "bytes")
-	context.Writer.Header().Add("Content-Length", strconv.FormatInt(contentLength, 10))
-	context.Data(206, "video/mp4", data)
+	// Return the pre-signed URL
+	c.JSON(http.StatusOK, gin.H{"url": presignedURL.URL})
 }
+
+// func StreamVideo(c *gin.Context) {
+// 	videoFilename := c.Param("name") + ".mp4"
+// 	rangeHeader := c.Request.Header.Get("Range")
+
+// 	if rangeHeader == "" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Range header required"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	videoObject, err := s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+// 		Bucket: aws.String(bucketName),
+// 		Key:    aws.String(videoFilename),
+// 		Range:  aws.String(rangeHeader),
+// 	})
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve video from S3"})
+// 		c.Abort()
+// 		return
+// 	}
+// 	defer videoObject.Body.Close()
+
+// 	contentRange := *videoObject.ContentRange
+// 	contentLength := *videoObject.ContentLength
+
+// 	c.Writer.Header().Set("Content-Range", contentRange)
+// 	c.Writer.Header().Set("Accept-Ranges", "bytes")
+// 	c.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", contentLength))
+// 	c.Writer.Header().Set("Content-Type", "video/mp4")
+
+// 	_, err = io.Copy(c.Writer, videoObject.Body)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to stream video content"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	c.Status(http.StatusPartialContent)
+// }
+
+// func StreamVideo(c *gin.Context) {
+// 	// Get the filename from the URL
+// 	videoFilename := c.Param("name") + ".mp4"
+
+// 	// Get the Range header
+// 	rangeHeader := c.Request.Header.Get("Range")
+// 	if rangeHeader == "" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Range header required"})
+// 		c.Abort()
+// 		return
+// 	}
+// 	fmt.Println("Range header: ")
+// 	fmt.Println(rangeHeader)
+// 	// // Parse range
+// 	// ranges := strings.Split(strings.Replace(rangeHeader, "bytes=", "", 1), "-")
+// 	// start, err := strconv.ParseInt(ranges[0], 10, 64)
+// 	// if err != nil {
+// 	// 	c.Status(http.StatusNotAcceptable)
+// 	// 	c.Abort()
+// 	// 	return
+// 	// }
+
+// 	// Download video from S3
+// 	videoObject, err := s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+// 		Bucket: aws.String(bucketName),
+// 		Key:    aws.String(videoFilename),
+// 		Range:  aws.String(rangeHeader), // Fetch only the range of bytes requested
+// 	})
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve video from S3"})
+// 		c.Abort()
+// 		return
+// 	}
+// 	defer videoObject.Body.Close()
+
+// 	// Read video content
+// 	contentRange := *videoObject.ContentRange
+// 	contentLength := *videoObject.ContentLength
+// 	fmt.Println("range: ")
+// 	fmt.Println(contentRange)
+// 	fmt.Println("length: ")
+// 	fmt.Println(contentLength)
+// 	buffer := make([]byte, contentLength)
+// 	videoObject.Body.Read(buffer)
+
+// 	// Set headers for range-based response
+// 	c.Writer.Header().Set("Content-Range", contentRange)
+// 	c.Writer.Header().Set("Accept-Ranges", "bytes")
+// 	c.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", contentLength))
+
+// 	// Return partial content status and video data
+// 	c.Data(http.StatusPartialContent, "video/mp4", buffer)
+// }
+
+// func StreamVideo(c *gin.Context) {
+// 	// Get the filename from the URL
+// 	videoFilename := c.Param("name") + ".mp4"
+
+// 	// Get the Range header
+// 	rangeHeader := c.Request.Header.Get("Range")
+// 	if rangeHeader == "" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Range header required"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	// Parse range
+// 	ranges := strings.Split(strings.Replace(rangeHeader, "bytes=", "", 1), "-")
+// 	start, err := strconv.ParseInt(ranges[0], 10, 64)
+// 	if err != nil {
+// 		c.Status(http.StatusNotAcceptable)
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	var end int64
+// 	if len(ranges) > 1 && ranges[1] != "" {
+// 		end, err = strconv.ParseInt(ranges[1], 10, 64)
+// 		if err != nil {
+// 			c.Status(http.StatusNotAcceptable)
+// 			c.Abort()
+// 			return
+// 		}
+// 	} else {
+// 		end = start + 1024*1024 - 1 // Default to 1MB range if end is not specified
+// 	}
+// 	fmt.Println("Start: ")
+// 	fmt.Println(start)
+// 	fmt.Println("End: ")
+// 	fmt.Println(end)
+// 	// Download video from S3
+// 	videoObject, err := s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+// 		Bucket: aws.String(bucketName),
+// 		Key:    aws.String(videoFilename),
+// 		Range:  aws.String(fmt.Sprintf("bytes=%d-%d", start, end)),
+// 	})
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve video from S3"})
+// 		c.Abort()
+// 		return
+// 	}
+// 	defer videoObject.Body.Close()
+
+// 	// Read video content
+// 	contentLength := end - start + 1
+// 	buffer := make([]byte, contentLength)
+// 	bytesRead, err := io.ReadFull(videoObject.Body, buffer)
+// 	if err != nil && err != io.EOF {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read video content"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	if int64(bytesRead) != contentLength {
+// 		// Debugging output
+// 		fmt.Printf("Expected content length: %d\n", contentLength)
+// 		fmt.Printf("Actual content length read: %d\n", bytesRead)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected content length read"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	// Set headers for range-based response
+// 	c.Writer.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, *videoObject.ContentLength))
+// 	c.Writer.Header().Set("Accept-Ranges", "bytes")
+// 	c.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", bytesRead))
+// 	c.Writer.Header().Set("Content-Type", "video/mp4")
+
+// 	// Return partial content status and video data
+// 	c.Data(http.StatusPartialContent, "video/mp4", buffer[:bytesRead])
+// }
+
+// func StreamVideo(c *gin.Context) {
+// 	// Get the filename from the URL
+// 	videoFilename := c.Param("name") + ".mp4"
+
+// 	// Download the full video from S3
+// 	videoObject, err := s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+// 		Bucket: aws.String(bucketName),
+// 		Key:    aws.String(videoFilename),
+// 	})
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve video from S3"})
+// 		c.Abort()
+// 		return
+// 	}
+// 	defer videoObject.Body.Close()
+
+// 	// Set headers for the full video response
+// 	c.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", *videoObject.ContentLength))
+// 	c.Writer.Header().Set("Content-Type", "video/mp4")
+// 	c.Writer.Header().Set("isBase64Encoded", "true")
+
+// 	// Stream the video content directly from S3 to the response
+// 	_, err = io.Copy(c.Writer, videoObject.Body)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to stream video content"})
+// 		c.Abort()
+// 		return
+// 	}
+
+// 	// Return success status
+// 	c.Status(http.StatusOK)
+// }
 
 func ReportVideo(context *gin.Context) {
 	videoId := context.Param("id")

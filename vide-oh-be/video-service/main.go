@@ -53,7 +53,7 @@ func main() {
 
 	// Initialize Database
 	database.Connect(connectionString)
-	database.Migrate()
+	// database.Migrate()
 
 	// Initial Data
 	// video := &models.Video{

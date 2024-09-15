@@ -18,9 +18,11 @@ provider:
         burstLimit: 5
         rateLimit: 1
     binaryMediaTypes:
+      # - '*/*'
       - 'multipart/form-data'
       - 'image/png'
       - 'video/mp4'
+      # - 'text/html'
   vpc:
     securityGroupIds:
       - "Fn::ImportValue": LambdaSecurityGroupId
@@ -111,6 +113,11 @@ functions:
             type: REQUEST
             identitySource: method.request.header.Authorization
             resultTtlInSeconds: 0
+      - http:
+          path: /api/videos/video-stream/{name}
+          method: GET
+          cors: true
+          private: true
     role: videohRole
     package:
       artifact: video-service/bin/lambda-handler.zip
