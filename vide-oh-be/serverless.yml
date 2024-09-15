@@ -17,6 +17,10 @@ provider:
       throttle:
         burstLimit: 5
         rateLimit: 1
+    binaryMediaTypes:
+      - 'multipart/form-data'
+      - 'image/png'
+      - 'video/mp4'
   vpc:
     securityGroupIds:
       - "Fn::ImportValue": LambdaSecurityGroupId
@@ -86,8 +90,6 @@ functions:
   videoHandler:
     handler: video-service/bin/bootstrap
     timeout: 30
-    # layers:
-    #   - Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:ffmpeg:3
     events:
       - http:
           path: /api/videos/ping
