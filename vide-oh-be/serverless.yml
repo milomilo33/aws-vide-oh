@@ -118,6 +118,36 @@ functions:
           method: GET
           cors: true
           private: true
+      - http:
+          path: /api/videos/report-video/{id}
+          method: GET
+          cors: true
+          private: true
+      - http:
+          path: /api/videos/search-videos
+          method: GET
+          cors: true
+          private: true
+      - http:
+          path: /api/videos/all-reported-videos
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/videos/delete-video/{id}
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
     role: videohRole
     package:
       artifact: video-service/bin/lambda-handler.zip
