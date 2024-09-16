@@ -21,7 +21,7 @@
                 <div v-for="video in videos" :key="video.ID">
                     <b-card
                         :title="video.title"
-                        :img-src="'/api/videos/static/' + video.filename + '.jpg'"
+                        :img-src="video.thumbnailUrl"
                         img-alt="Thumbnail"
                         img-top
                         tag="article"

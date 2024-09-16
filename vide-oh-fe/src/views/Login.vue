@@ -50,10 +50,13 @@ export default {
         return;
       }
       this.axios
-        .post("api/users/login", {
+        .post("/api/users/login", {
           email: this.email,
           password: this.password,
-        }, { withCredentials: true })
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+        }, })
         .then((response) => {
           sessionStorage.setItem("token", response.data.token);
           this.findUserRole();

@@ -51,39 +51,47 @@ functions:
       - http:
           path: /api/users/ping
           method: GET
+          cors: true
           private: true
       - http:
           path: /api/users/login
           method: POST
+          cors: true
           private: true
       - http:
           path: /api/users/register
           method: POST
+          cors: true
           private: true
       - http:
           path: /api/users/secured/ping
           method: GET
-          private: true
           cors: true
+          private: true
       - http:
           path: /api/users/secured/user/all-registered
           method: GET
+          cors: true
           private: true
       - http:
           path: /api/users/secured/block/{email}
           method: GET
+          cors: true
           private: true
       - http:
           path: /api/users/secured/user/{id}
           method: GET
+          cors: true
           private: true
       - http:
           path: /api/users/secured/user/current
           method: GET
+          cors: true
           private: true
       - http:
           path: /api/users/secured/user/change-name
           method: GET
+          cors: true
           private: true
     role: videohRole
     package:

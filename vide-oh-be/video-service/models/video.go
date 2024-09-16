@@ -32,6 +32,7 @@ type Video struct {
 }
 
 type VideoSearchResultDTO struct {
+	ID           uint   `json:"ID"`
 	Title        string `json:"title"`
 	Filename     string `json:"filename"`
 	Description  string `json:"description"`

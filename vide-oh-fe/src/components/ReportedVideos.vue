@@ -8,7 +8,7 @@
                 <div v-for="video in videos" :key="video.ID">
                     <b-card
                         :title="video.title"
-                        :img-src="'/api/videos/static/' + video.filename + '.jpg'"
+                        :img-src="video.thumbnailUrl"
                         img-alt="Thumbnail"
                         img-top
                         tag="article"
@@ -58,7 +58,7 @@
             },
 
             getReportedVideos() {
-                this.axios.get(`/api/videos/secured/all-reported-videos`, {
+                this.axios.get(`/api/videos/all-reported-videos`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -73,7 +73,7 @@
             },
 
             deleteVideoAndBlockUser(video) {
-                this.axios.get(`/api/videos/secured/delete-video/${video.ID}`, {
+                this.axios.get(`/api/videos/delete-video/${video.ID}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },

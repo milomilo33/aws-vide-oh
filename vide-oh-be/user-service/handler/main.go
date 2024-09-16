@@ -114,8 +114,23 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 	return ginLambda.ProxyWithContext(ctx, req)
 }
 
+func CORS() gin.HandlerFunc {
+	// TO allow CORS
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
+}
+
 func initRouter() *gin.Engine {
 	router := gin.Default()
+	router.Use(CORS())
 	api := router.Group("/api/users")
 	{
 		api.POST("/login", controllers.Login)

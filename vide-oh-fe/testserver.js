@@ -1,11 +1,25 @@
-// optional: allow environment to specify port
-const port = process.env.PORT || 8080
+// Optional: allow environment to specify port
+const port = process.env.PORT || 8080;
 
-// wire up the module
-const express = require('express') 
-// create server instance
-const app = express() 
-// bind the request to an absolute path or relative to the CWD
-app.use(express.static('dist'))
-// start the server
-app.listen(port, () => console.log(`Listening on port ${port}`))
+// Import required modules
+const express = require('express');
+const path = require('path');
+
+// Create server instance
+const app = express();
+
+app.use((req, res, next) => {
+    console.log(`Request URL: ${req.url}`);
+    next();
+});
+
+// Serve static files from the 'dist' directory
+app.use(express.static('dist'));
+
+// Add a wildcard route to serve index.html for any unknown paths
+app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+});
+
+// Start the server
+app.listen(port, () => console.log(`Listening on port ${port}`));

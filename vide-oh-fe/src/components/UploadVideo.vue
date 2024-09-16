@@ -79,7 +79,7 @@
                 let formData = new FormData();
                 formData.append("file", this.video_file);
 
-                this.axios.post(`http://localhost:8082/api/videos/secured/upload-video?title=${this.title}&description=${this.description}`, formData, {
+                this.axios.post(`/api/videos/upload-video?title=${this.title}&description=${this.description}`, formData, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                             'Content-Type': 'multipart/form-data',

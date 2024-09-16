@@ -1,31 +1,31 @@
 <template>
   <div>
     <b-navbar fixed="top" toggleable="lg" type="light" variant="light">
-    <b-navbar-brand href="/SupportPage/SupportMessages">Home Page</b-navbar-brand>
-    <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
-    <b-collapse id="nav-collapse" is-nav>    
-      <b-navbar-nav>
-      </b-navbar-nav>  
+      <b-navbar-brand :to="{ path: '/SupportPage/SupportMessages' }">Home Page</b-navbar-brand>
+      <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
+      <b-collapse id="nav-collapse" is-nav>    
+        <b-navbar-nav>
+          <!-- Other navigation items can go here -->
+        </b-navbar-nav>  
 
-      <!-- Right aligned nav items -->
-      <b-navbar-nav class="ml-auto">
-        <b-nav-item-dropdown right>
-          <!-- Using 'button-content' slot -->
-          <template #button-content>
-            <em>{{ current_name }} ({{ current_email }})</em>
-          </template>
-          <b-dropdown-item href="/SupportPage/Profile">Profile</b-dropdown-item>
-          <b-dropdown-item href="/Logout">Log out</b-dropdown-item>
-        </b-nav-item-dropdown>
-      </b-navbar-nav>
-    </b-collapse>
+        <!-- Right aligned nav items -->
+        <b-navbar-nav class="ml-auto">
+          <b-nav-item-dropdown right>
+            <!-- Using 'button-content' slot -->
+            <template #button-content>
+              <em>{{ current_name }} ({{ current_email }})</em>
+            </template>
+            <b-dropdown-item :to="{ path: '/SupportPage/Profile' }">Profile</b-dropdown-item>
+            <b-dropdown-item :to="{ path: '/Logout' }">Log out</b-dropdown-item>
+          </b-nav-item-dropdown>
+        </b-navbar-nav>
+      </b-collapse>
     </b-navbar>
 
-    <router-view>
-
-    </router-view>
+    <router-view></router-view>
   </div>
 </template>
+
 
 <script>
 

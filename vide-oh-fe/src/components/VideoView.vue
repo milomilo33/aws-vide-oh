@@ -2,8 +2,8 @@
     <div>
         <h1>{{ video.title }}</h1>
         <br>
-        <video controls style="max-width: 50%;">
-            <source :src="'/api/videos/video-stream/' + video.filename" type="video/mp4" />
+        <video ref="videoElement" controls style="max-width: 50%;">
+            Your browser does not support the video tag.
         </video>
         <br>
 
@@ -102,6 +102,17 @@
         },
 
         methods: {
+            loadVideo() {
+                this.axios.get(`/api/videos/video-stream/${this.video.filename}`)
+                    .then((response) => {
+                        const videoUrl = response.data.url;
+                        this.$refs.videoElement.src = videoUrl;
+                    })
+                    .catch((error) => {
+                        console.error('Error fetching video URL:', error);
+                    });
+            },
+
             rateVideo() {
                 let body = {
                     rating_owner_email: this.current_email,
@@ -280,6 +291,7 @@
             }
 
             this.video = this.$route.params.video;
+            this.loadVideo();
 
             if (this.role !== "UnregisteredUser") {
                 this.getComments();

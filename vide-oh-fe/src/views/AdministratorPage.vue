@@ -1,33 +1,32 @@
 <template>
   <div>
     <b-navbar fixed="top" toggleable="lg" type="light" variant="light">
-    <b-navbar-brand href="/AdministratorPage">Home Page</b-navbar-brand>
-    <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
-    <b-collapse id="nav-collapse" is-nav>    
-      <b-navbar-nav>
-        <b-nav-item href="/AdministratorPage/ReportedVideos">Reported videos</b-nav-item>
-        <b-nav-item href="/AdministratorPage/ReportedComments">Reported comments</b-nav-item>
-      </b-navbar-nav>  
+      <b-navbar-brand :to="{ path: '/AdministratorPage' }">Home Page</b-navbar-brand>
+      <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
+      <b-collapse id="nav-collapse" is-nav>
+        <b-navbar-nav>
+          <b-nav-item :to="{ path: '/AdministratorPage/ReportedVideos' }">Reported videos</b-nav-item>
+          <b-nav-item :to="{ path: '/AdministratorPage/ReportedComments' }">Reported comments</b-nav-item>
+        </b-navbar-nav>
 
-      <!-- Right aligned nav items -->
-      <b-navbar-nav class="ml-auto">
-        <b-nav-item-dropdown right>
-          <!-- Using 'button-content' slot -->
-          <template #button-content>
-            <em>{{ current_name }} ({{ current_email }})</em>
-          </template>
-          <b-dropdown-item href="/AdministratorPage/Profile">Profile</b-dropdown-item>
-          <b-dropdown-item href="/Logout">Log out</b-dropdown-item>
-        </b-nav-item-dropdown>
-      </b-navbar-nav>
-    </b-collapse>
+        <!-- Right aligned nav items -->
+        <b-navbar-nav class="ml-auto">
+          <b-nav-item-dropdown right>
+            <!-- Using 'button-content' slot -->
+            <template #button-content>
+              <em>{{ current_name }} ({{ current_email }})</em>
+            </template>
+            <b-dropdown-item :to="{ path: '/AdministratorPage/Profile' }">Profile</b-dropdown-item>
+            <b-dropdown-item :to="{ path: '/Logout' }">Log out</b-dropdown-item>
+          </b-nav-item-dropdown>
+        </b-navbar-nav>
+      </b-collapse>
     </b-navbar>
 
-    <router-view>
-
-    </router-view>
+    <router-view></router-view>
   </div>
 </template>
+
 
 <script>
 

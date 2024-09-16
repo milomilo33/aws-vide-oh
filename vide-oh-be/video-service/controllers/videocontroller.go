@@ -81,18 +81,38 @@ func ReportVideo(context *gin.Context) {
 	context.Status(http.StatusOK)
 }
 
-func GetAllReportedVideos(context *gin.Context) {
-	_, claims := utils.GetTokenClaims(context)
+func GetAllReportedVideos(c *gin.Context) {
+	_, claims := utils.GetTokenClaims(c)
 	if claims.Role != "Administrator" {
-		context.JSON(401, gin.H{"error": "unauthorized role"})
-		context.Abort()
+		c.JSON(401, gin.H{"error": "unauthorized role"})
+		c.Abort()
 		return
 	}
 
 	var videos []models.Video
 	database.Instance.Where("reported = ?", true).Find(&videos)
 
-	context.JSON(http.StatusOK, videos)
+	var videoSearchResults []models.VideoSearchResultDTO
+
+	// Generate pre-signed URLs for thumbnails and map the original videos to DTO
+	for _, video := range videos {
+		req := &s3.GetObjectInput{
+			Bucket: aws.String(bucketName),
+			Key:    aws.String(video.Filename + ".png"),
+		}
+		presignedURL, err := presignClient.PresignGetObject(context.TODO(), req, func(p *s3.PresignOptions) {
+			p.Expires = 15 * time.Minute
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate pre-signed URL"})
+			c.Abort()
+			return
+		}
+
+		videoSearchResults = append(videoSearchResults, toVideoSearchResultDTO(video, presignedURL.URL))
+	}
+
+	c.JSON(http.StatusOK, videoSearchResults)
 }
 
 func UploadVideo(c *gin.Context) {
@@ -247,6 +267,7 @@ func DeleteVideo(context *gin.Context) {
 
 func toVideoSearchResultDTO(video models.Video, thumbnailURL string) models.VideoSearchResultDTO {
 	return models.VideoSearchResultDTO{
+		ID:           video.ID,
 		Title:        video.Title,
 		Filename:     video.Filename,
 		Description:  video.Description,
@@ -259,14 +280,16 @@ func toVideoSearchResultDTO(video models.Video, thumbnailURL string) models.Vide
 func SearchVideos(c *gin.Context) {
 	var videos []models.Video
 	searchQuery := c.Query("query")
+
 	if searchQuery == "" {
 		database.Instance.Find(&videos)
-		c.JSON(http.StatusOK, videos)
-		c.Abort()
-		return
+	} else {
+		searchQuery = "%" + strings.ToLower(searchQuery) + "%"
+		database.Instance.Where("lower(title) LIKE ?", searchQuery).
+			Or("lower(description) LIKE ?", searchQuery).
+			Or("owner_email LIKE ?", searchQuery).
+			Find(&videos)
 	}
-	searchQuery = "%" + strings.ToLower(searchQuery) + "%"
-	database.Instance.Where("lower(title) LIKE ?", searchQuery).Or("lower(description) LIKE ?", searchQuery).Or("owner_email LIKE ?", searchQuery).Find(&videos)
 
 	var videoSearchResults []models.VideoSearchResultDTO
 

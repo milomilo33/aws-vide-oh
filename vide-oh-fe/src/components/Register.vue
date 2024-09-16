@@ -82,7 +82,7 @@
                     return
                 }
 
-                this.axios.post(`/api/users/user/register`, body)
+                this.axios.post(`/api/users/register`, body)
                 .then(() => {
                     this.showSuccessModal();
                     this.$router.push("/Login");
