@@ -160,6 +160,39 @@ functions:
     package:
       artifact: video-service/bin/lambda-handler.zip
 
+  commentHandler:
+    handler: comment-service/bin/bootstrap
+    timeout: 30
+    events:
+      # - http:
+      #     path: /api/videos/ping
+      #     method: GET
+      #     cors: true
+      #     private: true
+      #     authorizer:
+      #       name: userAuthorizer
+      #       type: REQUEST
+      #       identitySource: method.request.header.Authorization
+      #       resultTtlInSeconds: 0
+      # - http:
+      #     path: /api/videos/upload-video
+      #     method: POST
+      #     cors: true
+      #     private: true
+      #     authorizer:
+      #       name: userAuthorizer
+      #       type: REQUEST
+      #       identitySource: method.request.header.Authorization
+      #       resultTtlInSeconds: 0
+      - http:
+          path: /api/comments/hello
+          method: GET
+          cors: true
+          private: true
+    role: videohRole
+    package:
+      artifact: comment-service/bin/lambda-handler.zip
+
   userAuthorizer:
     handler: user-service/bin/bootstrap
     environment:

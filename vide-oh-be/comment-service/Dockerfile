@@ -84,23 +84,23 @@
 FROM ghcr.io/cargo-lambda/cargo-lambda:latest as builder
 
 # Install cross-compilation dependencies for x86_64 (amd64)
-RUN apt-get update && apt-get install -y \
-    gcc-x86-64-linux-gnu \
-    libc6-dev-amd64-cross \
-    pkg-config \
-    libssl-dev \
-    libudev-dev \
-    build-essential \
-    curl
+# RUN apt-get update && apt-get install -y \
+#     gcc-x86-64-linux-gnu \
+#     libc6-dev-amd64-cross \
+#     pkg-config \
+#     # libssl-dev \
+#     # libudev-dev \
+#     build-essential \
+#     curl
 
 # Install Rust nightly (if needed by your project)
 RUN rustup install nightly && rustup default nightly
 
 # Set the target architecture for cross-compilation
-ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
-ENV PKG_CONFIG_ALLOW_CROSS=1
-ENV PKG_CONFIG_SYSROOT_DIR=/usr/x86_64-linux-gnu
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+# ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
+# ENV PKG_CONFIG_ALLOW_CROSS=1
+# ENV PKG_CONFIG_SYSROOT_DIR=/usr/x86_64-linux-gnu
+# ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
 
 # Create a new directory for your project
 WORKDIR /app
@@ -112,13 +112,17 @@ COPY . .
 RUN cargo clean
 RUN cargo +nightly lambda build --release --target x86_64-unknown-linux-gnu
 
-# Final stage: minimal image for the binary
-FROM debian:buster-slim
+# Copy the bootstrap file to the local project /bin folder
+FROM alpine:latest as final
+WORKDIR /app
 
-# Copy the built binaries from the builder stage
-COPY --from=builder /app/target/x86_64-unknown-linux-gnu/release /app/
+# Ensure /bin directory exists
+RUN mkdir -p /bin
 
-# Set the entry point
-CMD ["/app/comment-service"]
+# Copy bootstrap from the builder container
+COPY --from=builder /app/target/lambda/comment-service/bootstrap /app/bin/
+
+# Set a dummy entrypoint (you don't need to run the binary)
+CMD ["/bin/sh"]
 
 

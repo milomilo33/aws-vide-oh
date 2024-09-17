@@ -1,0 +1,9 @@
+services:
+  rust-cross-compile:
+    image: rust-cross-compile:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "cp /app/bin/bootstrap /output/; sleep 5"
+    volumes:
+      - ./bin:/output
