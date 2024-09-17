@@ -64,7 +64,6 @@
 
 import * as cdk from "aws-cdk-lib";
 import {aws_cloudfront as cloudfront, aws_s3 as s3, aws_s3_deployment as s3Deployment} from "aws-cdk-lib";
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import {Construct} from "constructs";
 import * as path from "path";
 import * as fs from 'fs';
@@ -134,7 +133,6 @@ export class VueAppStack extends cdk.Stack {
         webAppBucket: s3.IBucket,
         webDistribution: cloudfront.CloudFrontWebDistribution
     ) {
-        console.log("hello?");
         new s3Deployment.BucketDeployment(this, "VueAppDeployment", {
             destinationBucket: webAppBucket,
             sources: [
@@ -187,7 +185,6 @@ export class VueAppStack extends cdk.Stack {
                                         `cd ${SRC_PATH}`,
                                         `npm ci`,
                                         `npm run build`,
-                                        // `mkdir -p '${outputDir}'`,
                                         `cp -r dist/* '${outputDir}'`,
                                     ].join(" && "),
                                     {

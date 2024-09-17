@@ -1,4 +1,5 @@
 use rocket;
+use rocket_lamb::RocketExt;
 
 use crate::connection;
 use crate::handler;
@@ -17,5 +18,6 @@ pub fn create_routes() {
                     handler::get_rating_for_video,
                     handler::get_rating_for_user
                     ],
-        ).launch();
+        ).lambda()
+        .launch();
 }

@@ -61,7 +61,7 @@ func main() {
 
 	// Initialize Database
 	database.Connect(connectionString)
-	database.Migrate()
+	// database.Migrate()
 
 	// Initial Data
 	user := &models.User{

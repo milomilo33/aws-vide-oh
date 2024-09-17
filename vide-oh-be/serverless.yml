@@ -12,11 +12,11 @@ provider:
       - videohApiKey
     usagePlan:
       quota:
-        limit: 300
+        limit: 500
         period: MONTH
-      throttle:
-        burstLimit: 5
-        rateLimit: 1
+      # throttle:
+      #   burstLimit: 5
+      #   rateLimit: 1
     binaryMediaTypes:
       # - '*/*'
       - 'multipart/form-data'
