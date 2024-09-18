@@ -36,6 +36,7 @@ make-s3-bucket:
 build:
 	$(MAKE) -C user-service build
 	$(MAKE) -C video-service build
+	$(MAKE) -C comment-service build
 
 deploy: generate-secret make-s3-bucket build
 	serverless deploy
