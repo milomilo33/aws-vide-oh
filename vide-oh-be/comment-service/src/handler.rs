@@ -1,22 +1,15 @@
 use rocket::http::Status;
-use rocket::response::status;
 use rocket::serde::json::Json;
-use rocket::State;
-use diesel::result::Error;
-use diesel_async::RunQueryDsl;
 use crate::auth::MyJWTClaims;
 use crate::connection::DbConn;
 use crate::models::Comment;
 use crate::models::NewComment;
-use crate::models::Rating;
 use crate::models::NewRating;
 use crate::repository;
-use rocket::response::Responder;
-use rocket::Request;
 
-// Define async handler functions
+
 #[get("/comments/<video_id>")]
-pub async fn show_all_comments_for_video<'a>(video_id: i32, mut connection: DbConn<'a>, my_claims: MyJWTClaims) -> Result<Json<Vec<Comment>>, Status> {
+pub async fn show_all_comments_for_video<'a>(video_id: i32, mut connection: DbConn<'a>, _my_claims: MyJWTClaims) -> Result<Json<Vec<Comment>>, Status> {
     match repository::show_all_comments_for_video(video_id, &mut connection).await {
         Ok(comments) => Ok(Json(comments)),
         Err(_) => Err(Status::NotFound),
@@ -70,7 +63,7 @@ pub async fn delete_comment<'a>(comment_id: i32, mut connection: DbConn<'a>, my_
 }
 
 #[get("/comments/report/<comment_id>")]
-pub async fn report_comment<'a>(comment_id: i32, mut connection: DbConn<'a>, my_claims: MyJWTClaims) -> Result<Status, Status> {
+pub async fn report_comment<'a>(comment_id: i32, mut connection: DbConn<'a>, _my_claims: MyJWTClaims) -> Result<Status, Status> {
     match repository::report_comment(comment_id, &mut connection).await {
         Ok(_) => Ok(Status::Ok),
         Err(_) => Err(Status::NotFound),
@@ -90,7 +83,7 @@ pub async fn create_or_update_rating<'a>(new_rating: Json<NewRating>, mut connec
 }
 
 #[get("/ratings/total/<video_id>")]
-pub async fn get_rating_for_video<'a>(video_id: i32, mut connection: DbConn<'a>, my_claims: MyJWTClaims) -> Result<Json<f32>, Status> {
+pub async fn get_rating_for_video<'a>(video_id: i32, mut connection: DbConn<'a>, _my_claims: MyJWTClaims) -> Result<Json<f32>, Status> {
     match repository::get_rating_for_video(video_id, &mut connection).await {
         Ok(rat) => Ok(Json(rat)),
         Err(_) => Err(Status::NotFound),

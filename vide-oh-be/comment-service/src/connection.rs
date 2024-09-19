@@ -1,9 +1,5 @@
-// use diesel::prelude::*;
-// use diesel::r2d2::ConnectionManager;
-use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl};
-// use r2d2::Pool;
+use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use bb8::Pool;
-// use r2d2_diesel::ConnectionManager;
 use rocket::{Request, State};
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};

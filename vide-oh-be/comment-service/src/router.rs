@@ -5,13 +5,9 @@ use crate::connection;
 use crate::handler;
 use crate::cors::CORS;
 
-use diesel_async::{pooled_connection::bb8::Pool, AsyncPgConnection};
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
-
 pub async fn create_routes(connection_string: &str) -> Result<Rocket<Build>, rocket::Error> {
-    println!("before pool");
     let pool = connection::init_pool(&connection_string).await;
-    println!("after pool");
+
     let rocket = Rocket::build()
         .attach(CORS)
         .manage(pool)
@@ -27,6 +23,6 @@ pub async fn create_routes(connection_string: &str) -> Result<Rocket<Build>, roc
                 handler::get_rating_for_user
             ]
         );
-    println!("after build");
+
     Ok(rocket)
 }

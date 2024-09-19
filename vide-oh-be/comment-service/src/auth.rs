@@ -30,8 +30,8 @@ impl<'r> FromRequest<'r> for MyJWTClaims {
                             role: token.claims().role.clone(),
                             exp: token.claims().exp,
                         };
-                        println!("Role: {}", my_claims.role);  // Debug print of the role
-                        Outcome::Success(my_claims)  // Successfully parsed claims
+                        println!("Role: {}", my_claims.role);
+                        Outcome::Success(my_claims)
                     }
                     Err(_) => Outcome::Error((Status::Unauthorized, Status::Unauthorized)),  // Failed to parse token
                 }
