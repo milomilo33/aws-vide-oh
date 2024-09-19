@@ -31,21 +31,21 @@ export class VPCStack extends cdk.Stack {
             allowAllOutbound: true,
         });
 
-        // new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
-        //     vpc,
-        //     service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-        //     privateDnsEnabled: true,
-        //     securityGroups: [lambdaSG],
-        // });
-        // new ec2.GatewayVpcEndpoint(this, 'S3VpcEndpoint', {
-        //     vpc,
-        //     service: ec2.GatewayVpcEndpointAwsService.S3,
-        //     subnets: [
-        //         {
-        //             subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
-        //         }
-        //     ]
-        // });
+        new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
+            vpc,
+            service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+            privateDnsEnabled: true,
+            securityGroups: [lambdaSG],
+        });
+        new ec2.GatewayVpcEndpoint(this, 'S3VpcEndpoint', {
+            vpc,
+            service: ec2.GatewayVpcEndpointAwsService.S3,
+            subnets: [
+                {
+                    subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+                }
+            ]
+        });
 
         // new cdk.CfnOutput(this, 'VpcPublicSubnet1', {
         //     value: vpc.publicSubnets[0].subnetId,

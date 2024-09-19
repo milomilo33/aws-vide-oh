@@ -12,17 +12,18 @@ provider:
       - videohApiKey
     usagePlan:
       quota:
-        limit: 500
+        limit: 2000
         period: MONTH
       # throttle:
       #   burstLimit: 5
       #   rateLimit: 1
     binaryMediaTypes:
-      # - '*/*'
-      - 'multipart/form-data'
-      - 'image/png'
-      - 'video/mp4'
-      # - 'text/html'
+      - '*/*'
+      # - 'multipart/form-data'
+      # - 'image/png'
+      # - 'video/mp4'
+      # - 'application/json'
+      # # - 'text/html'
   vpc:
     securityGroupIds:
       - "Fn::ImportValue": LambdaSecurityGroupId

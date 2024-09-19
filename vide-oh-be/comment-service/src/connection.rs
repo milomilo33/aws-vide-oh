@@ -25,9 +25,9 @@ struct DbSecret {
     dbname: String,
 }
 
-pub async fn init_pool() -> Pool<AsyncDieselConnectionManager<AsyncPgConnection>> {
-    println!("hello1");
-    let db_secret = get_db_secret().await.expect("Failed to fetch DB secret");
+// Fetch the connection string
+pub async fn get_connection_string() -> Result<String, Box<dyn std::error::Error>> {
+    let db_secret = get_db_secret().await?;
     let url_encoded_password = encode(&db_secret.password);
     let connection_string = format!(
         "postgres://{}:{}@{}:{}/{}?sslmode=disable",
@@ -37,10 +37,16 @@ pub async fn init_pool() -> Pool<AsyncDieselConnectionManager<AsyncPgConnection>
         db_secret.port,
         db_secret.dbname
     );
-    println!("Connection string: {}", connection_string);
+    Ok(connection_string)
+}
+
+// Initialize the database pool
+pub async fn init_pool(connection_string: &str) -> AsyncPool {
     let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(connection_string);
-    println!("hello2");
-    Pool::builder().build(manager).await.expect("Failed to create DB pool")
+    Pool::builder()
+        .build(manager)
+        .await
+        .expect("Failed to create DB pool")
 }
 
 async fn get_db_secret() -> Result<DbSecret, Box<dyn std::error::Error>> {

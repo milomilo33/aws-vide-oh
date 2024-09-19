@@ -245,18 +245,22 @@
             },
 
             getComments() {
+                console.log("hello?");
                 this.axios.get(`/api/comments/${this.video.ID}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
                     })
                 .then((response) => {
+                    console.log('Response: ');
+                    console.log(response);
                     this.comments = response.data;
                     this.comments = this.comments.sort(function(x, y){
                         return new Date(y.posted_at) - new Date(x.posted_at);
                     })
                 })
                 .catch(error => {
+                    console.log("hello? 2");
                     this.comments = [];
                     console.log(error);
                 });

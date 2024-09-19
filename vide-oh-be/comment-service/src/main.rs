@@ -18,13 +18,14 @@ mod repository;
 mod handler;
 mod router;
 mod auth;
+mod cors;
 
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+// use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use diesel::prelude::*;
-use crate::connection::init_pool;
-use diesel_async::{pooled_connection::bb8::Pool, AsyncPgConnection};
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use crate::connection::{get_connection_string, init_pool};
+use diesel_async_migrations::EmbeddedMigrations;
+use diesel_async::{AsyncPgConnection, RunQueryDsl, AsyncConnection};
 
 use anyhow::Error;
 use std::sync::Arc;
@@ -71,21 +72,27 @@ pub const MIGRATIONS: diesel_async_migrations::EmbeddedMigrations = diesel_async
 //     Ok(())
 // }
 
+async fn run_migrations(connection_string: String) -> anyhow::Result<()> {
+    let mut conn = diesel_async::AsyncPgConnection::establish(&connection_string).await?;
+    MIGRATIONS.run_pending_migrations(&mut conn).await?;
+    Ok(())
+}
+
 #[rocket::main]
 async fn main() -> Result<(), LambdaError> {
     println!("hiiiiiii!!!!!");
     dotenv().ok();
 
-    // // Initialize the pool
-    // let pool = init_pool().await;
+    // Fetch connection string
+    let connection_string = get_connection_string().await.expect("Failed to get DB connection string");
 
-    // // Run migrations
-    // if let Err(e) = run_migrations(pool).await {
-    //     eprintln!("Failed to run migrations: {:?}", e);
-    //     return Err(LambdaError::from(e));
-    // }
+    // Run migrations
+    if let Err(e) = run_migrations(connection_string.clone()).await {
+        eprintln!("Failed to run migrations: {:?}", e);
+        return Err(LambdaError::from(e));
+    }
 
-    let rocket = router::create_routes().await?;
+    let rocket = router::create_routes(&connection_string ).await?;
     println!("before lambda");
     if is_running_on_lambda() {
         println!("hiiiiiii!!!!!222");
