@@ -120,7 +120,7 @@
                     rating_video_id: this.video.ID,
                 };
 
-                this.axios.post(`/api/comments/ratings`, body , {
+                this.axios.post(`/api/ratings`, body , {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -162,7 +162,7 @@
                     video_id: this.video.ID,
                 };
 
-                this.axios.post(`/api/comments/comments`, body , {
+                this.axios.post(`/api/comments`, body , {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -180,7 +180,7 @@
             },
 
             deleteComment(id) {
-                this.axios.get(`/api/comments/comments/delete/${id}`, {
+                this.axios.get(`/api/comments/delete/${id}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -198,7 +198,7 @@
             },
 
             reportComment(id) {
-                this.axios.get(`/api/comments/comments/report/${id}`, {
+                this.axios.get(`/api/comments/report/${id}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -215,7 +215,7 @@
             },
 
             getTotalRating() {
-                this.axios.get(`/api/comments/ratings/total/${this.video.ID}`, {
+                this.axios.get(`/api/ratings/total/${this.video.ID}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -230,7 +230,7 @@
             },
 
             getYourRating() {
-                this.axios.get(`/api/comments/ratings/user/${this.current_email}/${this.video.ID}`, {
+                this.axios.get(`/api/ratings/user/${this.current_email}/${this.video.ID}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -245,7 +245,7 @@
             },
 
             getComments() {
-                this.axios.get(`/api/comments/comments/${this.video.ID}`, {
+                this.axios.get(`/api/comments/${this.video.ID}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },

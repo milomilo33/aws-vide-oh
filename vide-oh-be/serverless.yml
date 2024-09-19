@@ -164,31 +164,86 @@ functions:
     handler: comment-service/bin/bootstrap
     timeout: 30
     events:
-      # - http:
-      #     path: /api/videos/ping
-      #     method: GET
-      #     cors: true
-      #     private: true
-      #     authorizer:
-      #       name: userAuthorizer
-      #       type: REQUEST
-      #       identitySource: method.request.header.Authorization
-      #       resultTtlInSeconds: 0
-      # - http:
-      #     path: /api/videos/upload-video
-      #     method: POST
-      #     cors: true
-      #     private: true
-      #     authorizer:
-      #       name: userAuthorizer
-      #       type: REQUEST
-      #       identitySource: method.request.header.Authorization
-      #       resultTtlInSeconds: 0
       - http:
-          path: /api/comments/hello
+          path: /api/comments/{video_id}
           method: GET
           cors: true
           private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/comments
+          method: POST
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/comments/reported
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/comments/delete/{comment_id}
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/comments/report/{comment_id}
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/ratings
+          method: POST
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/ratings/total/{video_id}
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/ratings/user/{owner_email}/{video_id}
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
     role: videohRole
     package:
       artifact: comment-service/bin/lambda-handler.zip

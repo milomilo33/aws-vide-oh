@@ -33,7 +33,7 @@
 
         methods: {
             getReportedComments() {
-                this.axios.get(`/api/comments/comments/reported`, {
+                this.axios.get(`/api/comments/reported`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -48,7 +48,7 @@
             },
 
             deleteCommentAndBlockUser(comment) {
-                this.axios.get(`/api/comments/comments/delete/${comment.id}`, {
+                this.axios.get(`/api/comments/delete/${comment.id}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },

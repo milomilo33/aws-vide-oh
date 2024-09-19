@@ -1,17 +1,19 @@
 use rocket::routes;
-use rocket::launch;
 use rocket::Build;
 use rocket::Rocket;
-use rocket_lamb::RocketExt;
 use crate::connection;
 use crate::handler;
 
-pub async fn create_routes() -> Result<Rocket<rocket::Ignite>, rocket::Error> {
-    let pool = connection::init_pool().await;
+use diesel_async::{pooled_connection::bb8::Pool, AsyncPgConnection};
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 
+pub async fn create_routes() -> Result<Rocket<Build>, rocket::Error> {
+    println!("before pool");
+    let pool = connection::init_pool().await;
+    println!("after pool");
     let rocket = Rocket::build()
         .manage(pool)
-        .mount("/dev/api/comments",
+        .mount("/dev/api",
             routes![
                 handler::show_all_comments_for_video,
                 handler::create_comment,
@@ -23,7 +25,6 @@ pub async fn create_routes() -> Result<Rocket<rocket::Ignite>, rocket::Error> {
                 handler::get_rating_for_user
             ]
         );
-
-    // Launch the Rocket instance
-    rocket.launch().await
+    println!("after build");
+    Ok(rocket)
 }

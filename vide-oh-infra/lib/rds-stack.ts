@@ -5,6 +5,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 const DB_PORT = 5432
+const POSTGRES_VERSION = rds.PostgresEngineVersion.VER_16; 
 
 interface RDSStackProps extends cdk.StackProps {
     vpc: ec2.Vpc
@@ -35,9 +36,17 @@ export class RDSStack extends cdk.Stack {
         },
     });
 
+    // Parameter group for not enforcing SSL
+    const parameterGroup = new rds.ParameterGroup(this, 'RDSParameterGroup', {
+        engine: rds.DatabaseInstanceEngine.postgres({ version: POSTGRES_VERSION }),
+        parameters: {
+            'rds.force_ssl': '0',
+        },
+    });
+
     // Create the RDS PostgreSQL instance
     const rdsInstance = new rds.DatabaseInstance(this, 'RDSPostgresInstance', {
-        engine: rds.DatabaseInstanceEngine.POSTGRES,
+        engine: rds.DatabaseInstanceEngine.postgres({ version: POSTGRES_VERSION }),
         vpc,
         securityGroups: [rdsSecurityGroup],
         credentials: rds.Credentials.fromSecret(rdsCredentialsSecret),
@@ -49,6 +58,7 @@ export class RDSStack extends cdk.Stack {
         multiAz: false,
         deletionProtection: false, // Ensure this is false for easy cleanup
         removalPolicy: cdk.RemovalPolicy.DESTROY, // Destroy the database when the stack is deleted
+        parameterGroup: parameterGroup
     });
 
     // Output the RDS endpoint and credentials

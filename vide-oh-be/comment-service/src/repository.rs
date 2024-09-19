@@ -14,6 +14,7 @@ pub async fn get_comment(comment_id: i32, connection: &mut AsyncPgConnection) ->
 }
 
 pub async fn create_comment(new_comment: NewComment, conn: &mut AsyncPgConnection) -> QueryResult<Comment> {
+    println!("Got into posting comment repo1");
     diesel::insert_into(comments::table)
         .values(&new_comment)
         .get_result(conn).await

@@ -8,6 +8,7 @@ extern crate rocket;
 extern crate serde_derive;
 
 use dotenv::dotenv;
+use lambda_web::{is_running_on_lambda, launch_rocket_on_lambda, LambdaError};
 use rocket::tokio;
 
 mod schema;
@@ -18,26 +19,94 @@ mod handler;
 mod router;
 mod auth;
 
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+
+use diesel::prelude::*;
+use crate::connection::init_pool;
+use diesel_async::{pooled_connection::bb8::Pool, AsyncPgConnection};
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+
+use anyhow::Error;
+use std::sync::Arc;
+
+pub const MIGRATIONS: diesel_async_migrations::EmbeddedMigrations = diesel_async_migrations::embed_migrations!();
+
+// async fn run_migrations(pool: Pool<AsyncDieselConnectionManager<AsyncPgConnection>>) -> anyhow::Result<()> {
+//     // let pool = Arc::new(init_pool().await);
+//     // Introduce a scope to limit the lifetime of the connection
+//     // {
+//     //     let mut conn = pool.get().await?;
+//     //     MIGRATIONS.run_pending_migrations(&mut conn).await?;
+//     // }
+
+//     tokio::spawn(async move {
+//         let mut conn = pool.get().await.unwrap();
+//         MIGRATIONS.run_pending_migrations(&mut conn).await.unwrap();
+//         println!("Migrations applied successfully");
+//     }).await??;
+
+//     println!("Migrations applied successfully");
+//     Ok(())
+// }
+
+// async fn run_migrations(pool: Pool<AsyncDieselConnectionManager<AsyncPgConnection>>) -> anyhow::Result<()> {
+//     tokio::spawn(async move {
+//         let mut conn = match pool.get().await {
+//             Ok(conn) => conn,
+//             Err(e) => {
+//                 eprintln!("Failed to get connection: {:?}", e);
+//                 return;
+//             }
+//         };
+
+//         if let Err(e) = MIGRATIONS.run_pending_migrations(&mut conn).await {
+//             eprintln!("Failed to run migrations: {:?}", e);
+//         } else {
+//             println!("Migrations applied successfully");
+//         }
+//     })
+//     .await
+//     .unwrap(); // Handle JoinHandle
+
+//     Ok(())
+// }
+
 #[rocket::main]
-async fn main() -> Result<(), rocket::Error> {
+async fn main() -> Result<(), LambdaError> {
+    println!("hiiiiiii!!!!!");
     dotenv().ok();
-    router::create_routes().await?;
+
+    // // Initialize the pool
+    // let pool = init_pool().await;
+
+    // // Run migrations
+    // if let Err(e) = run_migrations(pool).await {
+    //     eprintln!("Failed to run migrations: {:?}", e);
+    //     return Err(LambdaError::from(e));
+    // }
+
+    let rocket = router::create_routes().await?;
+    println!("before lambda");
+    if is_running_on_lambda() {
+        println!("hiiiiiii!!!!!222");
+        // Launch on AWS Lambda
+        launch_rocket_on_lambda(rocket).await?;
+    } else {
+        println!("what the fuck?");
+        // Launch locally
+        rocket.launch().await?;
+    }
+    
     Ok(())
 }
 
-// #![feature(proc_macro_hygiene, decl_macro)]
+// use tokio_postgres::NoTls;
 
-// #[macro_use] extern crate rocket;
-// use rocket_lamb::RocketExt;
-
-// #[get("/hello")]
-// fn hello() -> &'static str {
-//     "Hello, world!"
-// }
-
-// fn main() {
-//     rocket::ignite()
-//         .mount("/dev/api/comments", routes![hello])
-//         .lambda() // launch the Rocket as a Lambda
-//         .launch();
+// #[tokio::main]
+// async fn main() {
+//     match tokio_postgres::connect("host=videoh-db-rdspostgresinstancef1143a12-1u9zojmspa86.cpi4mwekqm79.eu-central-1.rds.amazonaws.com port=5432 user=postgres password=8G?I&{yU2;FS31X0[XHkN+}\\$<is23bC dbname=videoh", tokio_postgres::NoTls).await
+//     {
+//         Ok(_) => println!("Successfully connected to database!"),
+//         Err(e) => eprintln!("Failed to connect to the database: {:?}", e),
+//     }
 // }

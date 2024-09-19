@@ -25,13 +25,18 @@ pub async fn show_all_comments_for_video<'a>(video_id: i32, mut connection: DbCo
 
 #[post("/comments", format = "application/json", data = "<new_comment>")]
 pub async fn create_comment<'a>(new_comment: Json<NewComment>, mut connection: DbConn<'a>, my_claims: MyJWTClaims) -> Result<Status, Status> {
+    println!("Got into posting comment1");
     if !my_claims.email.eq(&new_comment.owner_email) {
         return Err(Status::Unauthorized);
     }
-
+    println!("Got into posting comment2");
     match repository::create_comment(new_comment.into_inner(), &mut connection).await {
         Ok(_) => Ok(Status::Ok),
-        Err(_) => Err(Status::BadRequest),
+        Err(err) => {
+            // Print the error message
+            println!("Failed to create comment: {:?}", err);
+            Err(Status::BadRequest)
+        },
     }
 }
 

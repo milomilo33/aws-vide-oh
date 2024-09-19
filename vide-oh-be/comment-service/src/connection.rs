@@ -12,10 +12,11 @@ use serde::Deserialize;
 use rusoto_core::Region;
 use rusoto_secretsmanager::SecretsManager;
 use rusoto_secretsmanager::{SecretsManagerClient, GetSecretValueRequest}; 
+use urlencoding::encode;
 
 type AsyncPool = Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct DbSecret {
     username: String,
     password: String,
@@ -25,33 +26,39 @@ struct DbSecret {
 }
 
 pub async fn init_pool() -> Pool<AsyncDieselConnectionManager<AsyncPgConnection>> {
+    println!("hello1");
     let db_secret = get_db_secret().await.expect("Failed to fetch DB secret");
+    let url_encoded_password = encode(&db_secret.password);
     let connection_string = format!(
-        "postgres://{}:{}@{}:{}/{}",
+        "postgres://{}:{}@{}:{}/{}?sslmode=disable",
         db_secret.username,
-        db_secret.password,
+        url_encoded_password,
         db_secret.host,
         db_secret.port,
         db_secret.dbname
     );
+    println!("Connection string: {}", connection_string);
     let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(connection_string);
+    println!("hello2");
     Pool::builder().build(manager).await.expect("Failed to create DB pool")
 }
 
 async fn get_db_secret() -> Result<DbSecret, Box<dyn std::error::Error>> {
     let secret_name = std::env::var("DB_SECRET_NAME").expect("DB_SECRET_NAME must be set");
-
+    println!("dbsecret1");
     let client = SecretsManagerClient::new(Region::default());
-
+    println!("dbsecret2");
     let request = GetSecretValueRequest {
         secret_id: secret_name,
         ..Default::default()
     };
-
+    println!("dbsecret3");
     let result = client.get_secret_value(request).await?; // Use `.await()` here
+    println!("dbsecret4");
     let secret_string = result.secret_string.expect("SecretString is empty");
-
+    println!("dbsecret5");
     let db_secret: DbSecret = serde_json::from_str(&secret_string)?;
+    println!("{:?}", db_secret);
     Ok(db_secret)
 }
 
@@ -62,14 +69,24 @@ impl<'r> FromRequest<'r> for DbConn<'r> {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+        println!("hey! i get to guard");
         let pool = match request.guard::<&State<AsyncPool>>().await {
             Outcome::Success(pool) => pool,
-            Outcome::Error(_) => return Outcome::Error((Status::ServiceUnavailable, ())),
+            Outcome::Error(e) => {
+                eprintln!("Failed to retrieve the database pool: {:?}", e);
+                return Outcome::Error((Status::ServiceUnavailable, ()));
+            },
             Outcome::Forward(_) => return Outcome::Forward(Status::Continue),
         };
         match pool.get().await {
-            Ok(conn) => Outcome::Success(DbConn(conn)),
-            Err(_) => Outcome::Error((Status::ServiceUnavailable, ())),
+            Ok(conn) => {
+                println!("Successfully acquired a database connection");
+                Outcome::Success(DbConn(conn))
+            },
+            Err(e) => {
+                eprintln!("Failed to get a connection from the pool: {:?}", e);
+                Outcome::Error((Status::ServiceUnavailable, ()))
+            }
         }
     }
 }

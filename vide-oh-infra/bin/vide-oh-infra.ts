@@ -9,7 +9,7 @@ const app = new cdk.App();
 const vpcStack = new VPCStack(app, `videoh-vpc`, {});
 const rdsStack = new RDSStack(app, `videoh-db`, { vpc: vpcStack.vpc });
 rdsStack.addDependency(vpcStack);
-const vueAppStack = new VueAppStack(app, 'videoh-vue-appx', {
+const vueAppStack = new VueAppStack(app, 'videoh-vue-app', {
     env: {
         region: 'eu-central-1',
     },
