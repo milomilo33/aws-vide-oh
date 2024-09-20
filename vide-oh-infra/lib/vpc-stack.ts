@@ -17,8 +17,14 @@ export class VPCStack extends cdk.Stack {
                     name: 'PrivateSubnet',
                     cidrMask: 24
                 },
+                {
+                    subnetType: ec2.SubnetType.PUBLIC,
+                    name: 'PublicSubnet',
+                    cidrMask: 24
+                },
             ],
-            natGateways: 0
+            // CHANGE
+            natGateways: 1
         });
 
         vpc.applyRemovalPolicy(RemovalPolicy.DESTROY)
@@ -46,23 +52,35 @@ export class VPCStack extends cdk.Stack {
                 }
             ]
         });
+        // new ec2.InterfaceVpcEndpoint(this, 'ApiGatewayEndpoint', {
+        //     vpc,
+        //     service: ec2.InterfaceVpcEndpointAwsService.APIGATEWAY,
+        //     privateDnsEnabled: true,
+        //     securityGroups: [lambdaSG],
+        // });
+        vpc.addGatewayEndpoint('DynamoDbEndpoint', {
+            service: ec2.GatewayVpcEndpointAwsService.DYNAMODB,
+            subnets: [
+                { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }
+            ]
+        });
 
-        // new cdk.CfnOutput(this, 'VpcPublicSubnet1', {
-        //     value: vpc.publicSubnets[0].subnetId,
-        //     exportName: 'VpcPublicSubnet1'
-        // });
-        // new cdk.CfnOutput(this, 'VpcPublicSubnet2', {
-        //     value: vpc.publicSubnets[1].subnetId,
-        //     exportName: 'VpcPublicSubnet2'
-        // });
+        new cdk.CfnOutput(this, 'VpcPublicSubnet1', {
+            value: vpc.publicSubnets[0].subnetId,
+            exportName: 'VpcPublicSubnet1'
+        });
+        new cdk.CfnOutput(this, 'VpcPublicSubnet2', {
+            value: vpc.publicSubnets[1].subnetId,
+            exportName: 'VpcPublicSubnet2'
+        });
         new cdk.CfnOutput(this, 'VpcPrivateSubnet1', {
             value: vpc.privateSubnets[0].subnetId,
             exportName: 'VpcPrivateSubnet1'
         });
-        // new cdk.CfnOutput(this, 'VpcPrivateSubnet2', {
-        //     value: vpc.privateSubnets[1].subnetId,
-        //     exportName: 'VpcPrivateSubnet2'
-        // });
+        new cdk.CfnOutput(this, 'VpcPrivateSubnet2', {
+            value: vpc.privateSubnets[1].subnetId,
+            exportName: 'VpcPrivateSubnet2'
+        });
         new cdk.CfnOutput(this, 'LambdaSecurityGroupId', {
             value: lambdaSG.securityGroupId,
             exportName: 'LambdaSecurityGroupId'

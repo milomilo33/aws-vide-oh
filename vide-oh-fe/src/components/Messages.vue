@@ -73,7 +73,7 @@
             },
 
             getMessages() {
-                this.axios.get(`/api/messages/secured/${this.owner_email}/all`, {
+                this.axios.get(`/api/messages/${this.owner_email}/all`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },
@@ -91,28 +91,11 @@
             },
 
             setUpSockets() {
-                // this.socket = new SockJS(`ws://localhost:8084/api/messages/${this.owner_email}/ws`);
-                // this.stompClient = Stomp.over(this.socket);
-                // this.stompClient.connect(
-                //     {Authorization: "Bearer " + sessionStorage.getItem("token")},
-                //     frame => {
-                //     // console.log(frame);
-                //     this.stompClient.subscribe("/topic/alarms", tick => {
-                //         this.makeToast(false, tick.body);
-                //         // this.received_messages.push(JSON.parse(tick.body).content);
-                //     });
-                //     },
-                //     error => {
-                //     console.log(error);
-                //     this.connected = false;
-                //     }
-                // );
-
-                this.socket = new WebSocket(`ws://localhost:8084/api/messages/${this.owner_email}/ws?token=${sessionStorage.getItem('token')}`);
+                this.socket = new WebSocket(`${process.env.VUE_APP_WEBSOCKET_API_BASE_URL}?token=${sessionStorage.getItem('token')}&userEmail=${this.owner_email}`);
                 let _this = this;
                 this.socket.onmessage = function (msg) {
+                    console.log(msg);
                     _this.messages.push(JSON.parse(msg.data));
-                    // console.log(msg);
                 };
             },
         

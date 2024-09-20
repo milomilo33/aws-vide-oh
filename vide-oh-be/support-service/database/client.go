@@ -21,7 +21,10 @@ func Connect(connectionString string) {
 }
 
 func Migrate() {
-	Instance.Migrator().DropTable("messages")
-	Instance.AutoMigrate(&models.Message{})
-	log.Println("Database Migration Completed!")
+	if !Instance.Migrator().HasTable(&models.Message{}) {
+		Instance.AutoMigrate(&models.Message{})
+		log.Println("Table 'messages' created and database migration completed!")
+	} else {
+		log.Println("Table 'messages' already exists, skipping migration.")
+	}
 }

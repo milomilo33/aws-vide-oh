@@ -24,6 +24,8 @@ provider:
       # - 'video/mp4'
       # - 'application/json'
       # # - 'text/html'
+    websocketApiId:
+      "Fn::ImportValue": WebSocketApiId
   vpc:
     securityGroupIds:
       - "Fn::ImportValue": LambdaSecurityGroupId
@@ -249,6 +251,51 @@ functions:
     package:
       artifact: comment-service/bin/lambda-handler.zip
 
+  supportHandler:
+    handler: support-service/bin/bootstrap
+    timeout: 30
+    environment:
+      WEBSOCKET_API_URL:
+        Fn::ImportValue: WebSocketApiEndpoint
+      TABLE_NAME_CONNECTIONS:
+        Fn::ImportValue: TableNameConnections
+    events:
+      - http:
+          path: /api/messages/{email}/all
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - http:
+          path: /api/messages/user-emails
+          method: GET
+          cors: true
+          private: true
+          authorizer:
+            name: userAuthorizer
+            type: REQUEST
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
+      - websocket:
+          route: $connect
+          routeResponseSelectionExpression: $default
+          authorizer:
+            name: userAuthorizer
+            identitySource: 'route.request.querystring.token'
+      - websocket:
+          route: $disconnect
+          routeResponseSelectionExpression: $default
+      - websocket:
+          route: $default
+          routeResponseSelectionExpression: $default
+    role: videohRole
+    package:
+      artifact: support-service/bin/lambda-handler.zip
+
   userAuthorizer:
     handler: user-service/bin/bootstrap
     environment:
@@ -311,5 +358,60 @@ resources:
                     - s3:PutObject
                   Resource:
                     - "arn:aws:s3:::vide-oh-videos/*"
+          - PolicyName: allowWebSocketAccess
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action: execute-api:ManageConnections
+                  Resource:
+                    # - "arn:aws:execute-api:*:*:*/*/@connections/*"
+                    - Fn::Join:
+                        - ""
+                        - - "arn:aws:execute-api:"
+                          - Ref: "AWS::Region"
+                          - ":"
+                          - Ref: "AWS::AccountId"
+                          - ":"
+                          - Fn::ImportValue: WebSocketApiId
+                          - "/dev/POST/@connections/*"
+                    - Fn::Join:
+                        - ""
+                        - - "arn:aws:execute-api:"
+                          - Ref: AWS::Region
+                          - ":"
+                          - Ref: AWS::AccountId
+                          - ":"
+                          - Fn::ImportValue: WebSocketApiId
+                          - "/dev/DELETE/@connections/*"
+          - PolicyName: allowDynamoDBAccess
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:Scan
+                    - dynamodb:Query
+                    - dynamodb:GetItem
+                    - dynamodb:PutItem
+                    - dynamodb:DeleteItem
+                    - dynamodb:UpdateItem
+                  Resource:
+                    - Fn::Join:
+                        - ""
+                        - - "arn:aws:dynamodb:"
+                          - Ref: "AWS::Region"
+                          - ":"
+                          - Ref: "AWS::AccountId"
+                          - ":table/"
+                          - Fn::ImportValue: TableNameConnections
+          # - PolicyName: allowCloudFormationAccess
+          #   PolicyDocument:
+          #     Version: "2012-10-17"
+          #     Statement:
+          #       - Effect: Allow
+          #         Action:
+          #           - cloudformation:DescribeStacks
+          #         Resource: "*"
         ManagedPolicyArns:
           - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole

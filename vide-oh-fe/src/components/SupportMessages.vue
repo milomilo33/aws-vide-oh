@@ -31,7 +31,7 @@
 
         methods: {
             getMessages() {
-                this.axios.get(`/api/messages/secured/user-emails`, {
+                this.axios.get(`/api/messages/user-emails`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },

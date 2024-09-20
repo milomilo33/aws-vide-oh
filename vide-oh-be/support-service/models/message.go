@@ -13,3 +13,8 @@ type Message struct {
 	Date       time.Time `json:"date" gorm:"not null"`
 	SentByUser bool      `json:"sentByUser" gorm:"not null"`
 }
+
+type SocketMessage struct {
+	Message string `json:"message"`
+	Token   string `json:"token"`
+}

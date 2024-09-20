@@ -153,15 +153,7 @@ export class VueAppStack extends cdk.Stack {
                                     ]).stdout.toString().trim();
                                 }
                                 const restApiBaseUrl = getStackOutput('vide-oh-dev', 'ServiceEndpoint');
-                        
-                                // const secretResult = spawnSync('aws', [
-                                //     'secretsmanager', 'get-secret-value',
-                                //     '--secret-id', 'VideohSecretKey',
-                                //     '--query', 'SecretString',
-                                //     '--output', 'text'
-                                // ]).stdout.toString().trim();
-                                // const secret = JSON.parse(secretResult);
-                                // const apiKey = secret['secretKey'];
+                                const websocketApiBaseUrl = getStackOutput('videoh-websocket', 'WebSocketApiEndpoint');
 
                                 const apiKeysResult = spawnSync('aws', [
                                     'apigateway', 'get-api-keys',
@@ -177,7 +169,7 @@ export class VueAppStack extends cdk.Stack {
                                 console.log('API Key:', apiKey);
 
                                 const envFilePath = path.join(SRC_PATH, '/.env');
-                                const envContent = `VUE_APP_REST_API_BASE_URL=${restApiBaseUrl}\nVUE_APP_API_KEY=${apiKey}\n`;
+                                const envContent = `VUE_APP_REST_API_BASE_URL=${restApiBaseUrl}\nVUE_APP_API_KEY=${apiKey}\nVUE_APP_WEBSOCKET_API_BASE_URL=${websocketApiBaseUrl}\n`;
                                 fs.writeFileSync(envFilePath, envContent, 'utf8');
 
                                 spawnSync(

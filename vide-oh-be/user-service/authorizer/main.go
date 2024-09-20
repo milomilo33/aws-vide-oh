@@ -17,9 +17,12 @@ import (
 func handler(request events.APIGatewayV2CustomAuthorizerV1Request) (events.APIGatewayCustomAuthorizerResponse, error) {
 	token := request.Headers["Authorization"]
 	if token == "" {
-		return generateUnauthorizedResponse("Authorization token is missing"), nil
+		token = request.QueryStringParameters["token"]
+		if token == "" {
+			return generateUnauthorizedResponse("Authorization token is missing"), nil
+		}
 	}
-	fmt.Println("hi")
+
 	// Validate token
 	err, claims := middleware.ValidateTokenForLambdaAuthorizer(token)
 	if err != nil {
