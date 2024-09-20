@@ -53,10 +53,10 @@ export class RDSStack extends cdk.Stack {
         instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO), // Free tier eligible
         allocatedStorage: 20, // Minimum storage to remain within free tier
         maxAllocatedStorage: 20,
-        publiclyAccessible: false, // Set to true if Lambda is in a different VPC
+        publiclyAccessible: false,
         databaseName: 'videoh',
         multiAz: false,
-        deletionProtection: false, // Ensure this is false for easy cleanup
+        deletionProtection: false,
         removalPolicy: cdk.RemovalPolicy.DESTROY, // Destroy the database when the stack is deleted
         parameterGroup: parameterGroup
     });

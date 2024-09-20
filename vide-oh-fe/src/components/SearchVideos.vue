@@ -4,7 +4,6 @@
         <br>
         <div style="width:100%;text-align:center;">
             <b-form inline style="display: inline-block;">
-                <!-- <label>Keyword:</label> -->
                 <b-form-input id="keyword"
                             name="keyword"
                             placeholder="Keyword..."
@@ -83,7 +82,7 @@
             },
 
             deleteVideo(id) {
-                this.axios.get(`/api/videos/secured/delete-video/${id}`, {
+                this.axios.get(`/api/videos/delete-video/${id}`, {
                         headers: {
                             Authorization: sessionStorage.getItem('token'),
                         },

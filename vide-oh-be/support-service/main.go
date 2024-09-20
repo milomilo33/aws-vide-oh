@@ -339,19 +339,8 @@ func HandleMessage(ctx context.Context, req events.APIGatewayWebsocketProxyReque
 	attributevalue.UnmarshalListOfMaps(scanResult.Items, &connectionsWithUserEmail)
 
 	// Send message to relevant connections
-	// logger := log.New(os.Stdout, "", log.LstdFlags)
-	// loggingImpl := logging.LoggerFunc(func(classification logging.Classification, format string, v ...interface{}) {
-	// 	logger.Printf("[%v] %s", classification, fmt.Sprintf(format, v...))
-	// })
-	// cfgx, err := config.LoadDefaultConfig(context.TODO(),
-	// 	config.WithLogger(loggingImpl),
-	// 	config.WithClientLogMode(aws.LogRequestWithBody|aws.LogResponseWithBody),
-	// 	config.WithRegion(region),
-	// )
-	x := strings.Replace(websocketApiUrl, "wss", "https", 1)
-	fmt.Println(x)
 	apigatewayClient := apigatewaymanagementapi.NewFromConfig(cfg, func(o *apigatewaymanagementapi.Options) {
-		o.BaseEndpoint = aws.String(x)
+		o.BaseEndpoint = aws.String(strings.Replace(websocketApiUrl, "wss", "https", 1))
 	})
 	for _, connectionWithUserEmail := range connectionsWithUserEmail {
 		input := &apigatewaymanagementapi.PostToConnectionInput{
