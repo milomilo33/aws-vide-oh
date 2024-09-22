@@ -24,7 +24,7 @@ export class VPCStack extends cdk.Stack {
                 },
             ],
             // CHANGE
-            natGateways: 1
+            natGateways: 0
         });
 
         vpc.applyRemovalPolicy(RemovalPolicy.DESTROY)
@@ -37,26 +37,27 @@ export class VPCStack extends cdk.Stack {
             allowAllOutbound: true,
         });
 
-        // new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
+        // new ec2.GatewayVpcEndpoint(this, 'S3VpcEndpoint', {
         //     vpc,
-        //     service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-        //     privateDnsEnabled: true,
-        //     securityGroups: [lambdaSG],
+        //     service: ec2.GatewayVpcEndpointAwsService.S3,
+        //     subnets: [
+        //         {
+        //             subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+        //         }
+        //     ]
         // });
-        new ec2.GatewayVpcEndpoint(this, 'S3VpcEndpoint', {
-            vpc,
-            service: ec2.GatewayVpcEndpointAwsService.S3,
-            subnets: [
-                {
-                    subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
-                }
-            ]
-        });
+
         // vpc.addGatewayEndpoint('DynamoDbEndpoint', {
         //     service: ec2.GatewayVpcEndpointAwsService.DYNAMODB,
         //     subnets: [
         //         { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }
         //     ]
+        // });
+        // new ec2.InterfaceVpcEndpoint(this, 'SecretsManagerEndpoint', {
+        //     vpc,
+        //     service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+        //     privateDnsEnabled: true,
+        //     securityGroups: [lambdaSG],
         // });
 
         new cdk.CfnOutput(this, 'VpcPrivateSubnet1', {

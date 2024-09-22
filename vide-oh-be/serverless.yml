@@ -374,15 +374,6 @@ resources:
                           - ":"
                           - Fn::ImportValue: WebSocketApiId
                           - "/dev/POST/@connections/*"
-                    # - Fn::Join:
-                    #     - ""
-                    #     - - "arn:aws:execute-api:"
-                    #       - Ref: AWS::Region
-                    #       - ":"
-                    #       - Ref: AWS::AccountId
-                    #       - ":"
-                    #       - Fn::ImportValue: WebSocketApiId
-                    #       - "/dev/DELETE/@connections/*"
           - PolicyName: allowDynamoDBAccess
             PolicyDocument:
               Version: "2012-10-17"

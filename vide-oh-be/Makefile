@@ -4,7 +4,6 @@ generate-secret:
 	# aws secretsmanager update-secret --secret-id VideohSecretKey --secret-string "{\"secretKey\":\"$$SECRET_KEY\"}" || \
 	aws secretsmanager create-secret --name VideohSecretKey --secret-string "{\"secretKey\":\"$$SECRET_KEY\"}" || \
 	echo "Skipping secret creation, it may already exist"
-	echo "Secret generated and stored in Secrets Manager"
 
 make-s3-bucket:
 	@BUCKET_NAME=vide-oh-videos; \
@@ -16,22 +15,6 @@ make-s3-bucket:
 	else \
 		echo "Bucket already exists. Skipping creation."; \
 	fi
-
-# publish-ffmpeg-layer:
-# 	@LAYER_NAME=ffmpeg; \
-# 	ZIP_FILE=ffmpeg-layer.zip; \
-# 	echo "Checking if layer exists..."; \
-# 	layer_arn=$$(aws lambda list-layers --query "Layers[?LayerName=='$$LAYER_NAME'].LayerArn" --output text); \
-# 	echo "Layer ARN (raw output): $$layer_arn"; \
-# 	if [ -z "$$layer_arn" ]; then \
-# 		echo "Layer does not exist. Publishing new layer..."; \
-# 		(cd ffmpeg-layer && zip -r $$OLDPWD/$$ZIP_FILE bin/); \
-# 		echo "Zipping completed."; \
-# 		echo "Publishing layer..."; \
-# 		aws lambda publish-layer-version --layer-name $$LAYER_NAME --zip-file fileb://$$ZIP_FILE --compatible-runtimes provided.al2023; \
-# 	else \
-# 		echo "Layer already exists. Skipping publish."; \
-# 	fi
 
 build:
 	$(MAKE) -C user-service build
